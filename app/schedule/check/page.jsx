@@ -22,53 +22,28 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  // Fungsi untuk mendapatkan warna berdasarkan tipe bus
-  const getBusColor = (busName) => {
-    if (busName.toLowerCase().includes('pariwisata')) {
+  // Fungsi untuk mendapatkan warna berdasarkan opsi tambahan
+  const getEventColor = (options) => {
+    // Jika ada opsi tambahan (lergest atau bantal leher), beri warna biru
+    if (options && (options.lergest || options.bantalLeher)) {
       return { bg: '#3b82f6', text: '#ffffff' }; // Biru
-    } else if (busName.toLowerCase().includes('executive')) {
-      return { bg: '#10b981', text: '#ffffff' }; // Hijau
-    } else if (busName.toLowerCase().includes('luxury')) {
-      return { bg: '#8b5cf6', text: '#ffffff' }; // Ungu
-    } else if (busName.toLowerCase().includes('ekonomi')) {
-      return { bg: '#f59e0b', text: '#ffffff' }; // Orange
     } else {
       return { bg: '#6b7280', text: '#ffffff' }; // Abu-abu default
     }
   };
+const dummyScheduleList = [
+  { customer: "Ahmad", bus: "Bus Pariwisata 01", pickup: "Jakarta", destination: "Bali", seats: "3-2", dp: 500000, price: 2500000, start: "2025-10-01T08:00:00", end: "2025-10-03T20:00:00", options: { lergest: true }, driver: "Budi", conductor: "Santi", sales: "Andi" },
+  { customer: "Siti", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: "3-2", dp: 300000, price: 1500000, start: "2025-10-02T09:00:00", end: "2025-10-02T18:00:00", options: null, driver: "Tono", conductor: "Rina", sales: "Bambang" },
+];
 
-  const dummyScheduleList = [
-    { customer: "Ahmad", bus: "Bus Pariwisata 01", pickup: "Jakarta", destination: "Bali", seats: 30, dp: 500000, price: 2500000, start: "2025-10-01T08:00:00", end: "2025-10-03T20:00:00" },
-    { customer: "Siti", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 20, dp: 300000, price: 1500000, start: "2025-10-02T09:00:00", end: "2025-10-02T18:00:00" },
-    { customer: "Budi", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Yogyakarta", seats: 25, dp: 400000, price: 2000000, start: "2025-10-04T07:00:00", end: "2025-10-05T19:00:00" },
-    { customer: "Dewi", bus: "Bus Pariwisata 01", pickup: "Bogor", destination: "Bali", seats: 28, dp: 500000, price: 2500000, start: "2025-10-05T08:00:00", end: "2025-10-07T20:00:00" },
-    { customer: "Rina", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 18, dp: 300000, price: 1500000, start: "2025-10-06T10:00:00", end: "2025-10-06T18:00:00" },
-    { customer: "Agus", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Semarang", seats: 25, dp: 400000, price: 2000000, start: "2025-10-07T06:00:00", end: "2025-10-08T19:00:00" },
-    { customer: "Rudi", bus: "Bus Pariwisata 01", pickup: "Depok", destination: "Bali", seats: 30, dp: 500000, price: 2500000, start: "2025-10-08T08:00:00", end: "2025-10-10T20:00:00" },
-    { customer: "Nina", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 20, dp: 300000, price: 1500000, start: "2025-10-09T09:00:00", end: "2025-10-09T18:00:00" },
-    { customer: "Eko", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Malang", seats: 25, dp: 400000, price: 2000000, start: "2025-10-10T07:00:00", end: "2025-10-11T19:00:00" },
-    { customer: "Tia", bus: "Bus Pariwisata 01", pickup: "Jakarta", destination: "Bali", seats: 28, dp: 500000, price: 2500000, start: "2025-10-11T08:00:00", end: "2025-10-13T20:00:00" },
-    { customer: "Hendra", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 18, dp: 300000, price: 1500000, start: "2025-10-12T10:00:00", end: "2025-10-12T18:00:00" },
-    { customer: "Mira", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Yogyakarta", seats: 25, dp: 400000, price: 2000000, start: "2025-10-13T06:00:00", end: "2025-10-14T19:00:00" },
-    { customer: "Fajar", bus: "Bus Pariwisata 01", pickup: "Bogor", destination: "Bali", seats: 30, dp: 500000, price: 2500000, start: "2025-10-14T08:00:00", end: "2025-10-16T20:00:00" },
-    { customer: "Lina", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 20, dp: 300000, price: 1500000, start: "2025-10-15T09:00:00", end: "2025-10-15T18:00:00" },
-    { customer: "Doni", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Malang", seats: 25, dp: 400000, price: 2000000, start: "2025-10-16T07:00:00", end: "2025-10-17T19:00:00" },
-    { customer: "Sari", bus: "Bus Pariwisata 01", pickup: "Depok", destination: "Bali", seats: 28, dp: 500000, price: 2500000, start: "2025-10-17T08:00:00", end: "2025-10-19T20:00:00" },
-    { customer: "Bayu", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 18, dp: 300000, price: 1500000, start: "2025-10-18T10:00:00", end: "2025-10-18T18:00:00" },
-    { customer: "Rina", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Yogyakarta", seats: 25, dp: 400000, price: 2000000, start: "2025-10-19T06:00:00", end: "2025-10-20T19:00:00" },
-    { customer: "Arif", bus: "Bus Pariwisata 01", pickup: "Jakarta", destination: "Bali", seats: 30, dp: 500000, price: 2500000, start: "2025-10-20T08:00:00", end: "2025-10-22T20:00:00" },
-    { customer: "Nadia", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: 20, dp: 300000, price: 1500000, start: "2025-10-21T09:00:00", end: "2025-10-21T18:00:00" },
-    { customer: "Yoga", bus: "Bus Executive 03", pickup: "Jakarta", destination: "Malang", seats: 25, dp: 400000, price: 2000000, start: "2025-10-22T07:00:00", end: "2025-10-23T19:00:00" },
-    { customer: "Dina", bus: "Bus Pariwisata 01", pickup: "Bogor", destination: "Bali", seats: 28, dp: 500000, price: 2500000, start: "2025-10-23T08:00:00", end: "2025-10-25T20:00:00" },
-  ];
 
   // Convert scheduleList menjadi events calendar dengan warna
   useEffect(() => {
     const mappedEvents = dummyScheduleList.map((s) => {
-      const colors = getBusColor(s.bus);
+      const colors = getEventColor(s.options);
       return {
         ...s,
-        title: `${s.bus} - ${s.customer}`,
+        title: `${s.bus} - ${s.destination}`,
         start: new Date(s.start),
         end: new Date(s.end),
         backgroundColor: colors.bg,
@@ -183,23 +158,15 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
 
         {/* Legend Warna Bus */}
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-sm font-semibold text-gray-700 mb-2">Keterangan Warna Bus:</p>
+          <p className="text-sm font-semibold text-gray-700 mb-2">Keterangan Warna:</p>
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-              <span className="text-sm text-gray-600">Bus Pariwisata</span>
+              <span className="text-sm text-gray-600">Dengan Opsi (Lergest)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: '#10b981' }}></div>
-              <span className="text-sm text-gray-600">Bus Executive</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: '#8b5cf6' }}></div>
-              <span className="text-sm text-gray-600">Bus Luxury</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
-              <span className="text-sm text-gray-600">Bus Ekonomi</span>
+              <div className="w-5 h-5 rounded" style={{ backgroundColor: '#6b7280' }}></div>
+              <span className="text-sm text-gray-600">Tanpa Opsi Tambahan</span>
             </div>
           </div>
         </div>
@@ -260,11 +227,27 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
                     <p className="text-sm text-gray-500">Customer</p>
                     <p className="font-semibold text-gray-800">{selectedEvent.customer}</p>
                   </div>
+                   <div>
+                        <p className="text-sm text-gray-500">Sales</p>
+                        <p className="font-semibold text-gray-800">{selectedEvent.sales}</p>
+                    </div>
                   <div>
                     <p className="text-sm text-gray-500">Bus</p>
                     <p className="font-semibold text-gray-800">{selectedEvent.bus}</p>
                   </div>
                 </div>
+                {/* <div className="grid grid-cols-3 gap-4">
+                    <div>
+                        <p className="text-sm text-gray-500">Supir</p>
+                        <p className="font-semibold text-gray-800">{selectedEvent.driver}</p>
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500">Kernet</p>
+                        <p className="font-semibold text-gray-800">{selectedEvent.conductor}</p>
+                    </div>
+                   
+                </div> */}
+
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -279,8 +262,8 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Jumlah Kursi</p>
-                    <p className="font-semibold text-gray-800">{selectedEvent.seats} kursi</p>
+                    <p className="text-sm text-gray-500">Konfigurasi Kursi</p>
+                    <p className="font-semibold text-gray-800">{selectedEvent.seats}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">DP</p>
@@ -289,6 +272,21 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
                     </p>
                   </div>
                 </div>
+
+                {/* Opsi Tambahan */}
+                {selectedEvent.options && (
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Opsi Tambahan:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {selectedEvent.options.lergest && (
+                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                          Lergest
+                        </span>
+                      )}
+                     
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <p className="text-sm text-gray-500">Total Harga</p>

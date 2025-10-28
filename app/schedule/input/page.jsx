@@ -14,6 +14,10 @@ export default function ScheduleInputPage() {
     price: "",
     start: "",
     end: "",
+    driver: "",
+    conductor: "",
+    sales: "",
+    lergest: false,
   });
   const [scheduleList, setScheduleList] = useState([]);
 
@@ -24,7 +28,6 @@ export default function ScheduleInputPage() {
   ];
 
   const addSchedule = () => {
-    // Validasi semua field
     if (
       !form.customer ||
       !selectedBus ||
@@ -34,7 +37,10 @@ export default function ScheduleInputPage() {
       !form.dp ||
       !form.price ||
       !form.start ||
-      !form.end
+      !form.end ||
+      !form.driver ||
+      !form.conductor ||
+      !form.sales
     ) {
       alert("Lengkapi semua field sebelum menyimpan!");
       return;
@@ -47,10 +53,14 @@ export default function ScheduleInputPage() {
       pickup: form.pickup,
       destination: form.destination,
       seats: form.seats,
-      dp: form.dp,
-      price: form.price,
+      dp: parseInt(form.dp),
+      price: parseInt(form.price),
       start: new Date(form.start),
       end: new Date(form.end),
+      driver: form.driver,
+      conductor: form.conductor,
+      sales: form.sales,
+      options: { lergest: form.lergest ? true : null },
     };
 
     setScheduleList((prev) => [...prev, newSchedule]);
@@ -64,6 +74,10 @@ export default function ScheduleInputPage() {
       price: "",
       start: "",
       end: "",
+      driver: "",
+      conductor: "",
+      sales: "",
+      lergest: false,
     });
     setSelectedBus(null);
   };
@@ -83,68 +97,145 @@ export default function ScheduleInputPage() {
 
         {/* Form Input */}
         <div className="grid md:grid-cols-4 sm:grid-cols-2 gap-4 mb-6">
-          <input
-            type="text"
-            placeholder="Nama Customer"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.customer}
-            onChange={(e) => setForm({ ...form, customer: e.target.value })}
-          />
-          <Select
-            options={busOptions}
-            value={selectedBus}
-            onChange={setSelectedBus}
-            placeholder="Pilih Bus..."
-            isClearable
-          />
-          <input
-            type="text"
-            placeholder="Penjemputan"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.pickup}
-            onChange={(e) => setForm({ ...form, pickup: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Tujuan"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.destination}
-            onChange={(e) => setForm({ ...form, destination: e.target.value })}
-          />
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Nama Customer</label>
+            <input
+              type="text"
+              placeholder="Nama Customer"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.customer}
+              onChange={(e) => setForm({ ...form, customer: e.target.value })}
+            />
+          </div>
 
-          <input
-            type="number"
-            placeholder="Jumlah Bangku"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.seats}
-            onChange={(e) => setForm({ ...form, seats: e.target.value })}
-          />
-          <input
-            type="number"
-            placeholder="DP"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.dp}
-            onChange={(e) => setForm({ ...form, dp: e.target.value })}
-          />
-          <input
-            type="number"
-            placeholder="Price"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-          />
-          <input
-            type="datetime-local"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.start}
-            onChange={(e) => setForm({ ...form, start: e.target.value })}
-          />
-          <input
-            type="datetime-local"
-            className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-            value={form.end}
-            onChange={(e) => setForm({ ...form, end: e.target.value })}
-          />
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Bus</label>
+            <Select
+              options={busOptions}
+              value={selectedBus}
+              onChange={setSelectedBus}
+              placeholder="Pilih Bus..."
+              isClearable
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Penjemputan</label>
+            <input
+              type="text"
+              placeholder="Penjemputan"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.pickup}
+              onChange={(e) => setForm({ ...form, pickup: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Tujuan</label>
+            <input
+              type="text"
+              placeholder="Tujuan"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.destination}
+              onChange={(e) => setForm({ ...form, destination: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Bangku (contoh: 3-2)</label>
+            <input
+              type="text"
+              placeholder="Bangku"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.seats}
+              onChange={(e) => setForm({ ...form, seats: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">DP</label>
+            <input
+              type="number"
+              placeholder="DP"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.dp}
+              onChange={(e) => setForm({ ...form, dp: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Price</label>
+            <input
+              type="number"
+              placeholder="Price"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Mulai</label>
+            <input
+              type="datetime-local"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Selesai</label>
+            <input
+              type="datetime-local"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.end}
+              onChange={(e) => setForm({ ...form, end: e.target.value })}
+            />
+          </div>
+
+          {/* <div>
+            <label className="block text-gray-700 font-medium mb-1">Supir</label>
+            <input
+              type="text"
+              placeholder="Supir"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.driver}
+              onChange={(e) => setForm({ ...form, driver: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Kernet</label>
+            <input
+              type="text"
+              placeholder="Kernet"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.conductor}
+              onChange={(e) => setForm({ ...form, conductor: e.target.value })}
+            />
+          </div> */}
+
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Sales</label>
+            <input
+              type="text"
+              placeholder="Sales"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.sales}
+              onChange={(e) => setForm({ ...form, sales: e.target.value })}
+            />
+          </div>
+
+          <div className="flex items-center mt-6 md:mt-0">
+            <input
+              type="checkbox"
+              checked={form.lergest}
+              onChange={(e) => setForm({ ...form, lergest: e.target.checked })}
+              className="mr-2"
+            />
+            <label className="text-gray-700 text-sm font-medium">Lergest</label>
+          </div>
         </div>
 
         <button
@@ -168,6 +259,9 @@ export default function ScheduleInputPage() {
                 <th className="p-3 text-left font-medium">Price</th>
                 <th className="p-3 text-left font-medium">Mulai</th>
                 <th className="p-3 text-left font-medium">Selesai</th>
+                {/* <th className="p-3 text-left font-medium">Supir</th>
+                <th className="p-3 text-left font-medium">Kernet</th> */}
+                <th className="p-3 text-left font-medium">Sales</th>
                 <th className="p-3 text-center font-medium">Aksi</th>
               </tr>
             </thead>
@@ -181,12 +275,11 @@ export default function ScheduleInputPage() {
                   <td className="p-3 text-center">{s.seats}</td>
                   <td className="p-3 text-center">{s.dp}</td>
                   <td className="p-3 text-center">{s.price}</td>
-                  <td className="p-3">
-                    {new Date(s.start).toLocaleString("id-ID")}
-                  </td>
-                  <td className="p-3">
-                    {new Date(s.end).toLocaleString("id-ID")}
-                  </td>
+                  <td className="p-3">{new Date(s.start).toLocaleString("id-ID")}</td>
+                  <td className="p-3">{new Date(s.end).toLocaleString("id-ID")}</td>
+                  {/* <td className="p-3">{s.driver}</td>
+                  <td className="p-3">{s.conductor}</td> */}
+                  <td className="p-3">{s.sales}</td>
                   <td className="p-3 text-center">
                     <button
                       onClick={() => deleteSchedule(s.id)}
@@ -197,10 +290,9 @@ export default function ScheduleInputPage() {
                   </td>
                 </tr>
               ))}
-
               {scheduleList.length === 0 && (
                 <tr>
-                  <td colSpan="10" className="text-center p-6 text-gray-500 italic">
+                  <td colSpan="13" className="text-center p-6 text-gray-500 italic">
                     Belum ada jadwal
                   </td>
                 </tr>
