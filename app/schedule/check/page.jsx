@@ -24,15 +24,15 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
 
   // Fungsi untuk mendapatkan warna berdasarkan opsi tambahan
   const getEventColor = (options) => {
-    // Jika ada opsi tambahan (lergest atau bantal leher), beri warna biru
-    if (options && (options.lergest || options.bantalLeher)) {
+    // Jika ada opsi tambahan (legrest atau bantal leher), beri warna biru
+    if (options && (options.legrest || options.bantalLeher)) {
       return { bg: '#3b82f6', text: '#ffffff' }; // Biru
     } else {
       return { bg: '#6b7280', text: '#ffffff' }; // Abu-abu default
     }
   };
 const dummyScheduleList = [
-  { customer: "Ahmad", bus: "Bus Pariwisata 01", pickup: "Jakarta", destination: "Bali", seats: "3-2", dp: 500000, price: 2500000, start: "2025-10-01T08:00:00", end: "2025-10-03T20:00:00", options: { lergest: true }, driver: "Budi", conductor: "Santi", sales: "Andi" },
+  { customer: "Ahmad", bus: "Bus Pariwisata 01", pickup: "Jakarta", destination: "Bali", seats: "3-2", dp: 500000, price: 2500000, start: "2025-10-01T08:00:00", end: "2025-10-03T20:00:00", options: { legrest: true }, driver: "Budi", conductor: "Santi", sales: "Andi" },
   { customer: "Siti", bus: "Bus Pariwisata 02", pickup: "Jakarta", destination: "Bandung", seats: "3-2", dp: 300000, price: 1500000, start: "2025-10-02T09:00:00", end: "2025-10-02T18:00:00", options: null, driver: "Tono", conductor: "Rina", sales: "Bambang" },
 ];
 
@@ -162,7 +162,7 @@ const dummyScheduleList = [
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-              <span className="text-sm text-gray-600">Dengan Opsi (Lergest)</span>
+              <span className="text-sm text-gray-600">Dengan Opsi (Legrest)</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded" style={{ backgroundColor: '#6b7280' }}></div>
@@ -278,9 +278,9 @@ const dummyScheduleList = [
                   <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                     <p className="text-sm font-semibold text-gray-700 mb-1">Opsi Tambahan:</p>
                     <div className="flex gap-2 flex-wrap">
-                      {selectedEvent.options.lergest && (
+                      {selectedEvent.options.legrest && (
                         <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                          Lergest
+                          Legrest
                         </span>
                       )}
                      

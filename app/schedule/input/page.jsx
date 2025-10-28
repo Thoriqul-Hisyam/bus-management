@@ -17,7 +17,7 @@ export default function ScheduleInputPage() {
     driver: "",
     conductor: "",
     sales: "",
-    lergest: false,
+    legrest: false,
   });
   const [scheduleList, setScheduleList] = useState([]);
 
@@ -38,8 +38,6 @@ export default function ScheduleInputPage() {
       !form.price ||
       !form.start ||
       !form.end ||
-      !form.driver ||
-      !form.conductor ||
       !form.sales
     ) {
       alert("Lengkapi semua field sebelum menyimpan!");
@@ -60,7 +58,7 @@ export default function ScheduleInputPage() {
       driver: form.driver,
       conductor: form.conductor,
       sales: form.sales,
-      options: { lergest: form.lergest ? true : null },
+      options: { legrest: form.legrest ? true : null },
     };
 
     setScheduleList((prev) => [...prev, newSchedule]);
@@ -77,7 +75,7 @@ export default function ScheduleInputPage() {
       driver: "",
       conductor: "",
       sales: "",
-      lergest: false,
+      legrest: false,
     });
     setSelectedBus(null);
   };
@@ -230,11 +228,11 @@ export default function ScheduleInputPage() {
           <div className="flex items-center mt-6 md:mt-0">
             <input
               type="checkbox"
-              checked={form.lergest}
-              onChange={(e) => setForm({ ...form, lergest: e.target.checked })}
+              checked={form.legrest}
+              onChange={(e) => setForm({ ...form, legrest: e.target.checked })}
               className="mr-2"
             />
-            <label className="text-gray-700 text-sm font-medium">Lergest</label>
+            <label className="text-gray-700 text-sm font-medium">Legrest</label>
           </div>
         </div>
 
