@@ -133,7 +133,7 @@ export default function SchedulePage() {
       >
         {children}
         {libur && (
-          <div className="absolute bottom-1 left-1 right-1 text-[10px] text-red-700 bg-red-100 rounded px-1 py-[1px] truncate">
+          <div className="absolute bottom-1 left-1 right-1 text-[10px] text-red-700 bg-red-100 rounded px-1  truncate">
             {libur}
           </div>
         )}
@@ -148,7 +148,6 @@ export default function SchedulePage() {
   return (
     <div className="min-h-screen p-4 bg-gray-50">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 🚌 Form Tambah Jadwal */}
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-lg font-semibold mb-4 text-gray-700">
             Tambah Jadwal Bus
