@@ -19,13 +19,102 @@ export default function ScheduleInputPage() {
     sales: "",
     legrest: false,
   });
-  const [scheduleList, setScheduleList] = useState([]);
+  const [scheduleList, setScheduleList] = useState([
+  {
+    id: 1,
+    customer: "PT. Maju Jaya",
+    bus: "Bus Pariwisata 01",
+    pickup: "Jl. Pahlawan No.10",
+    destination: "Malang",
+    seats: "45",
+    dp: 3000000,
+    price: 7500000,
+    start: "2025-11-02T07:00",
+    end: "2025-11-02T21:00",
+    driver: "Budi",
+    conductor: "Andi",
+    sales: "Rina",
+    options: { legrest: true },
+  },
+  {
+    id: 2,
+    customer: "SMAN 5 Surabaya",
+    bus: "Bus Pariwisata 02",
+    pickup: "Sekolah SMAN 5 Surabaya",
+    destination: "Batu",
+    seats: "40",
+    dp: 2500000,
+    price: 7000000,
+    start: "2025-11-03T06:30",
+    end: "2025-11-03T20:00",
+    driver: "Slamet",
+    conductor: "Joko",
+    sales: "Tina",
+    options: { legrest: false },
+  },
+]);
+
 
   const busOptions = [
     { value: "bus01", label: "Bus Pariwisata 01" },
     { value: "bus02", label: "Bus Pariwisata 02" },
     { value: "bus03", label: "Bus Executive 03" },
   ];
+
+  const handlePrint = (schedule) => {
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Surat Jalan ${schedule.customer}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            td, th { border: 1px solid black; padding: 6px; font-size: 12px; vertical-align: top; }
+            h2 { text-align: right; margin-bottom: 0; }
+            .logo { width: 120px; }
+            .header { display: flex; justify-content: space-between; align-items: center; }
+            .note { color: red; font-weight: bold; text-align: center; margin-top: 10px; }
+            .footer { text-align: center; font-weight: bold; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="https://i.imgur.com/hz4V6Wb.png" class="logo" />
+            <div>
+              <h2>SURAT JALAN</h2>
+              <p>No. ${schedule.id}</p>
+            </div>
+          </div>
+
+          <p><strong>Alamat Garasi:</strong> Jl. Merr Boulevard No. 22, Kec. Rungkut, Penjaringan Sari, Kota Surabaya</p>
+
+          <table>
+            <tr><td>Jenis</td><td>JETBUS 5 SHD</td><td>Tujuan / Rute</td><td>${schedule.destination}</td></tr>
+            <tr><td>Nopol</td><td>${schedule.bus}</td><td>Sangu</td><td>Rp ${schedule.price.toLocaleString()}</td></tr>
+            <tr><td>Driver</td><td>${schedule.driver || "-"}</td><td>Tagihan</td><td></td></tr>
+            <tr><td>Co Driver</td><td>${schedule.conductor || "-"}</td><td>Premi Driver</td><td></td></tr>
+            <tr><td>Panitia</td><td>${schedule.customer}</td><td>Premi Co Driver</td><td></td></tr>
+            <tr><td>Tgl. Berangkat</td><td>${new Date(schedule.start).toLocaleDateString("id-ID")}</td><td>UM Driver</td><td></td></tr>
+            <tr><td>Tgl. Pulang</td><td>${new Date(schedule.end).toLocaleDateString("id-ID")}</td><td>UM Co Driver</td><td></td></tr>
+            <tr><td>Penjemputan</td><td>${schedule.pickup}</td><td>BBM</td><td></td></tr>
+            <tr><td>Keterangan</td><td> - </td><td>Total</td><td></td></tr>
+          </table>
+
+          <p class="note">
+            DRIVER / CO DRIVER YANG CUTI, NAMA PENGGANTINYA HARAP DI TULIS DI SURAT JALAN.<br/>
+            MAU CUTI.....!!! KONFIRMASI KANTOR / HUBUNGI BPK. ALIM
+          </p>
+
+          <p class="footer">KAMI HARAP AGAR DI ISI</p>
+
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
 
   const addSchedule = () => {
     if (
@@ -279,7 +368,7 @@ export default function ScheduleInputPage() {
                 <th className="p-3 text-center font-medium">Aksi</th>
               </tr>
             </thead>
-            <tbody>
+             <tbody>
               {scheduleList.map((s) => (
                 <tr key={s.id} className="border-t hover:bg-gray-50 transition-all">
                   <td className="p-3">{s.customer}</td>
@@ -287,26 +376,30 @@ export default function ScheduleInputPage() {
                   <td className="p-3">{s.pickup}</td>
                   <td className="p-3">{s.destination}</td>
                   <td className="p-3 text-center">{s.seats}</td>
-                  <td className="p-3 text-center">{s.dp}</td>
-                  <td className="p-3 text-center">{s.price}</td>
+                  <td className="p-3 text-center">Rp {s.dp.toLocaleString()}</td>
+                  <td className="p-3 text-center">Rp {s.price.toLocaleString()}</td>
                   <td className="p-3">{new Date(s.start).toLocaleString("id-ID")}</td>
                   <td className="p-3">{new Date(s.end).toLocaleString("id-ID")}</td>
-                  {/* <td className="p-3">{s.driver}</td>
-                  <td className="p-3">{s.conductor}</td> */}
                   <td className="p-3">{s.sales}</td>
-                  <td className="p-3 text-center">
+                  <td className="p-3 text-center flex gap-2 justify-center">
                     <button
                       onClick={() => deleteSchedule(s.id)}
                       className="text-red-500 hover:text-red-700 font-medium"
                     >
                       Hapus
                     </button>
+                    <button
+                      onClick={() => handlePrint(s)}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Cetak
+                    </button>
                   </td>
                 </tr>
               ))}
               {scheduleList.length === 0 && (
                 <tr>
-                  <td colSpan="13" className="text-center p-6 text-gray-500 italic">
+                  <td colSpan="11" className="text-center p-6 text-gray-500 italic">
                     Belum ada jadwal
                   </td>
                 </tr>
