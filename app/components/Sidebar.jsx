@@ -49,8 +49,8 @@ export default function Sidebar() {
         }`}
       >
         {/* Header */}
-        <h1 className="text-2xl font-bold mb-6 text-blue-700 text-center md:text-left">
-          Manajemen Bus
+        <h1 className="text-xl font-bold mb-6 text-blue-800 text-center md:text-left">
+          Manajemen Armada
         </h1>
 
         {/* Navigasi utama */}
@@ -66,13 +66,13 @@ export default function Sidebar() {
           >
             <FaCalendarAlt /> Input Jadwal
           </Link>
-          <Link
+          {/* <Link
             href="/schedule/check"
             className={linkClass("/schedule/check")}
             onClick={() => setOpen(false)}
           >
             <FaCalendarAlt /> Cek Jadwal
-          </Link>
+          </Link> */}
 
           {/* MASTER DATA COLLAPSIBLE */}
           <div>

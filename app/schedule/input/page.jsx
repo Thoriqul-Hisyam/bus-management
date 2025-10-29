@@ -90,7 +90,7 @@ export default function ScheduleInputPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto bg-white p-8 rounded-2xl shadow-md">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
-          Input Jadwal Bus
+          Input Jadwal Armada
         </h2>
 
         {/* Form Input */}
@@ -107,7 +107,7 @@ export default function ScheduleInputPage() {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-1">Bus</label>
+            <label className="block text-gray-700 font-medium mb-1">Armada</label>
             <Select
               options={busOptions}
               value={selectedBus}
@@ -116,7 +116,15 @@ export default function ScheduleInputPage() {
               isClearable
             />
           </div>
-
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Waktu Penjemputan</label>
+            <input
+              type="datetime-local"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.value })}
+            />
+          </div>
           <div>
             <label className="block text-gray-700 font-medium mb-1">Penjemputan</label>
             <input
@@ -140,7 +148,7 @@ export default function ScheduleInputPage() {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-1">Bangku (contoh: 3-2)</label>
+            <label className="block text-gray-700 font-medium mb-1">Bangku (Jumlah Kursi)</label>
             <input
               type="text"
               placeholder="Bangku"
@@ -149,7 +157,15 @@ export default function ScheduleInputPage() {
               onChange={(e) => setForm({ ...form, seats: e.target.value })}
             />
           </div>
-
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Tanggal DP</label>
+            <input
+              type="datetime-local"
+              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+              value={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.value })}
+            />
+          </div>
           <div>
             <label className="block text-gray-700 font-medium mb-1">DP</label>
             <input
@@ -249,7 +265,7 @@ export default function ScheduleInputPage() {
             <thead className="bg-blue-50 text-gray-700 text-sm uppercase">
               <tr>
                 <th className="p-3 text-left font-medium">Customer</th>
-                <th className="p-3 text-left font-medium">Bus</th>
+                <th className="p-3 text-left font-medium">Armada</th>
                 <th className="p-3 text-left font-medium">Penjemputan</th>
                 <th className="p-3 text-left font-medium">Tujuan</th>
                 <th className="p-3 text-left font-medium">Bangku</th>

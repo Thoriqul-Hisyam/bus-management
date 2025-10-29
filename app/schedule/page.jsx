@@ -216,7 +216,7 @@ export default function SchedulePage() {
         {/* 📅 Kalender */}
         <div className="lg:col-span-2 bg-white p-4 md:p-6 rounded-xl shadow-md overflow-hidden">
           <h2 className="text-lg font-semibold mb-4 text-gray-700">
-            Kalender Jadwal Bus
+            Kalender Jadwal Armada
           </h2>
 
           <div className="flex justify-between items-center mb-3 flex-wrap gap-2">

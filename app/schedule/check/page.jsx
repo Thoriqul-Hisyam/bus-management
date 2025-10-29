@@ -22,13 +22,11 @@ export default function ScheduleCheckPage({ scheduleList = [] }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  // Fungsi untuk mendapatkan warna berdasarkan opsi tambahan
   const getEventColor = (options) => {
-    // Jika ada opsi tambahan (legrest atau bantal leher), beri warna biru
     if (options && (options.legrest || options.bantalLeher)) {
-      return { bg: '#3b82f6', text: '#ffffff' }; // Biru
+      return { bg: '#3b82f6', text: '#ffffff' };
     } else {
-      return { bg: '#6b7280', text: '#ffffff' }; // Abu-abu default
+      return { bg: '#6b7280', text: '#ffffff' };
     }
   };
 const dummyScheduleList = [
@@ -37,7 +35,6 @@ const dummyScheduleList = [
 ];
 
 
-  // Convert scheduleList menjadi events calendar dengan warna
   useEffect(() => {
     const mappedEvents = dummyScheduleList.map((s) => {
       const colors = getEventColor(s.options);
@@ -156,7 +153,6 @@ const dummyScheduleList = [
           ))}
         </div>
 
-        {/* Legend Warna Bus */}
         <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <p className="text-sm font-semibold text-gray-700 mb-2">Keterangan Warna:</p>
           <div className="flex flex-wrap gap-4">
@@ -197,7 +193,6 @@ const dummyScheduleList = [
           />
         </div>
 
-        {/* Popup Detail Order */}
         {selectedEvent && (
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -207,7 +202,6 @@ const dummyScheduleList = [
               className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 transform transition-all"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
               <div className="flex items-center justify-between mb-4 pb-4 border-b">
                 <h3 className="text-xl font-bold text-gray-800">
                   Detail Pesanan
@@ -220,7 +214,6 @@ const dummyScheduleList = [
                 </button>
               </div>
 
-              {/* Content */}
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -273,7 +266,6 @@ const dummyScheduleList = [
                   </div>
                 </div>
 
-                {/* Opsi Tambahan */}
                 {selectedEvent.options && (
                   <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                     <p className="text-sm font-semibold text-gray-700 mb-1">Opsi Tambahan:</p>
