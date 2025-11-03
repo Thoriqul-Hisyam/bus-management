@@ -66,6 +66,13 @@ export default function Sidebar() {
           >
             <FaCalendarAlt /> Input Jadwal
           </Link>
+         <Link
+            href="/report/revenue"
+            className={linkClass("/report/revenue")}
+            onClick={() => setOpen(false)}
+          >
+            <FaCalendarAlt /> Report Revenue
+          </Link>
           {/* <Link
             href="/schedule/check"
             className={linkClass("/schedule/check")}
