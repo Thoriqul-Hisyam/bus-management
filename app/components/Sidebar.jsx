@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   FaBus,
   FaCalendarAlt,
+  FaMoneyBillWave,
   FaHome,
   FaBars,
   FaTimes,
@@ -66,20 +67,15 @@ export default function Sidebar() {
           >
             <FaCalendarAlt /> Input Jadwal
           </Link>
-         <Link
+         
+          <Link
             href="/report/revenue"
             className={linkClass("/report/revenue")}
             onClick={() => setOpen(false)}
           >
-            <FaCalendarAlt /> Report Revenue
+            <FaMoneyBillWave /> Report Revenue
           </Link>
-          {/* <Link
-            href="/schedule/check"
-            className={linkClass("/schedule/check")}
-            onClick={() => setOpen(false)}
-          >
-            <FaCalendarAlt /> Cek Jadwal
-          </Link> */}
+         
 
           {/* MASTER DATA COLLAPSIBLE */}
           <div>
