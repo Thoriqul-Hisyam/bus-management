@@ -32,4 +32,27 @@ EKSEKUTIF
 SUPER_EKSEKUTIF
 }
 
+model Position {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique @db.VarChar(255)
+  employees  Employee[] // Relasi one-to-many ke Employee
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now())
+
+  @@map("position") // nama tabel di DB
+}
+
+model Employee {
+  id         Int        @id @default(autoincrement())
+  fullName   String     @db.VarChar(255)
+  phone      String     @db.VarChar(255)
+  positionId Int
+  position   Position   @relation(fields: [positionId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @default(now())
+
+  @@map("employee") // nama tabel di DB
+}
+
+
 

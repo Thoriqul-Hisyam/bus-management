@@ -107,6 +107,13 @@ export default function Sidebar() {
                   <FaUserTie /> Karyawan
                 </Link>
                 <Link
+                  href="/master/position"
+                  className={linkClass("/master/position")}
+                  onClick={() => setOpen(false)}
+                >
+                  <FaUserTie /> Jabatan
+                </Link>
+                <Link
                   href="/master/customers"
                   className={linkClass("/master/customers")}
                   onClick={() => setOpen(false)}

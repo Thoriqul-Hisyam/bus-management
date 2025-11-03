@@ -1,132 +1,113 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Select from "react-select";
 import Swal from "sweetalert2";
-import "sweetalert2/dist/sweetalert2.min.css";
 
 export default function Employee() {
-  const [employees, setEmployees] = useState([
-    {
-      id: 1,
-      name: "Andi Pratama",
-      position: "Driver",
-      phone: "081234567890",
-      username: "andi",
-      password: "1234",
-    },
-    {
-      id: 2,
-      name: "Budi Santoso",
-      position: "Kondektur",
-      phone: "082233445566",
-      username: "budi",
-      password: "abcd",
-    },
-    {
-      id: 3,
-      name: "Citra Dewi",
-      position: "Admin Operasional",
-      phone: "083312345678",
-      username: "citra",
-      password: "admin",
-    },
-  ]);
-
+  const [employees, setEmployees] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [form, setForm] = useState({
-    name: "",
+    id: null,
+    fullName: "",
     position: null,
     phone: "",
     username: "",
     password: "",
   });
-  
 
-  const positionOptions = [
-    { value: "Driver", label: "Driver" },
-    { value: "Kondektur", label: "Kondektur" },
-    { value: "Admin Operasional", label: "Admin Operasional" },
-    { value: "Manajer", label: "Manajer" },
-    { value: "Teknisi", label: "Teknisi" },
-  ];
+  // Fetch positions dan employees
+  useEffect(() => {
+    fetchPositions();
+    fetchEmployees();
+  }, []);
 
-  const selectStyle = {
-    control: (provided) => ({
-      ...provided,
-      minHeight: "44px",
-      borderColor: "#d1d5db",
-      borderRadius: "0.5rem",
-      boxShadow: "none",
-      "&:hover": { borderColor: "#3b82f6" },
-    }),
-    valueContainer: (provided) => ({
-      ...provided,
-      padding: "0 0.75rem",
-    }),
-    indicatorsContainer: (provided) => ({
-      ...provided,
-      paddingRight: "0.5rem",
-    }),
+  const fetchPositions = async () => {
+    const res = await fetch("/api/position");
+    const data = await res.json();
+    setPositions(data.map((p) => ({ value: p.id, label: p.name })));
   };
 
-  const addEmployee = () => {
-    if (!form.name || !form.username || !form.password || !form.position) {
-      Swal.fire({
-        icon: "warning",
-        title: "Data belum lengkap",
-        text: "Nama, Jabatan, Username, dan Password wajib diisi!",
-      });
-      return;
-    }
+  const fetchEmployees = async () => {
+    const res = await fetch("/api/employee");
+    const data = await res.json();
+    setEmployees(data);
+  };
 
-    const newEmployee = {
-      id: Date.now(),
-      name: form.name,
-      position: form.position.value,
-      phone: form.phone,
-      username: form.username,
-      password: form.password,
-    };
-
-    setEmployees([...employees, newEmployee]);
+  const resetForm = () =>
     setForm({
-      name: "",
+      id: null,
+      fullName: "",
       position: null,
       phone: "",
       username: "",
       password: "",
     });
 
-    Swal.fire({
-      icon: "success",
-      title: "Berhasil!",
-      text: "Karyawan berhasil ditambahkan 🎉",
-      timer: 1500,
-      showConfirmButton: false,
+  const addOrUpdateEmployee = async () => {
+    if (!form.fullName || !form.username || !form.password || !form.position) {
+      Swal.fire("Peringatan", "Lengkapi semua kolom wajib!", "warning");
+      return;
+    }
+
+    const method = form.id ? "PUT" : "POST";
+
+    const res = await fetch("/api/employee", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: form.id,
+        fullName: form.fullName,
+        phone: form.phone,
+        username: form.username,
+        password: form.password,
+        positionId: form.position.value,
+      }),
+    });
+
+    if (res.ok) {
+      await fetchEmployees();
+      resetForm();
+      Swal.fire(
+        "Berhasil",
+        form.id ? "Data karyawan diperbarui" : "Karyawan ditambahkan",
+        "success"
+      );
+    } else {
+      Swal.fire("Gagal", "Tidak dapat menyimpan karyawan", "error");
+    }
+  };
+
+  const editEmployee = (emp) => {
+    setForm({
+      id: emp.id,
+      fullName: emp.fullName,
+      phone: emp.phone,
+      username: emp.username,
+      password: emp.password,
+      position: positions.find((p) => p.value === emp.positionId) || null,
     });
   };
 
-  const deleteEmployee = (id) => {
-    Swal.fire({
+  const deleteEmployee = async (id) => {
+    const confirm = await Swal.fire({
       title: "Yakin ingin menghapus?",
       text: "Data karyawan akan dihapus permanen.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, hapus!",
       cancelButtonText: "Batal",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setEmployees(employees.filter((e) => e.id !== id));
-        Swal.fire({
-          icon: "success",
-          title: "Dihapus!",
-          text: "Data karyawan telah dihapus.",
-          timer: 1200,
-          showConfirmButton: false,
-        });
-      }
+      confirmButtonText: "Ya, hapus!",
     });
+
+    if (confirm.isConfirmed) {
+      await fetch("/api/employee", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      await fetchEmployees();
+      Swal.fire("Dihapus!", "Data karyawan telah dihapus.", "success");
+    }
   };
 
   return (
@@ -135,76 +116,80 @@ export default function Employee() {
 
       {/* Form Input */}
       <div className="grid md:grid-cols-6 sm:grid-cols-2 gap-4 mb-6">
-        {/* Nama */}
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Nama</label>
+          <label className="text-sm font-medium mb-1">Nama Lengkap</label>
           <input
             type="text"
             placeholder="Nama lengkap"
-            className="border border-gray-300 focus:border-blue-500 rounded-lg p-3 focus:ring focus:ring-blue-100 transition-all"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="border p-3 rounded-lg"
+            value={form.fullName}
+            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
           />
         </div>
 
-        {/* Jabatan */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Jabatan</label>
           <Select
-            styles={selectStyle}
-            options={positionOptions}
+            options={positions}
             value={form.position}
             onChange={(selected) => setForm({ ...form, position: selected })}
             placeholder="Pilih jabatan..."
             isClearable
-
           />
         </div>
 
-        {/* Telepon */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Telepon</label>
           <input
             type="text"
             placeholder="Nomor Telepon"
-            className="border border-gray-300 focus:border-blue-500 rounded-lg p-3 focus:ring focus:ring-blue-100 transition-all"
+            className="border p-3 rounded-lg"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
         </div>
 
-        {/* Username */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Username</label>
           <input
             type="text"
             placeholder="Username login"
-            className="border border-gray-300 focus:border-blue-500 rounded-lg p-3 focus:ring focus:ring-blue-100 transition-all"
+            className="border p-3 rounded-lg"
             value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
           />
         </div>
 
-        {/* Password */}
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Password</label>
           <input
             type="password"
             placeholder="Password login"
-            className="border border-gray-300 focus:border-blue-500 rounded-lg p-3 focus:ring focus:ring-blue-100 transition-all"
+            className="border p-3 rounded-lg"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
         </div>
 
-        {/* Tombol Tambah */}
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           <button
-            onClick={addEmployee}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-sm transition-all w-full"
+            onClick={addOrUpdateEmployee}
+            className={`${
+              form.id
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            } text-white px-6 py-3 rounded-lg font-medium w-full`}
           >
-            + Tambah
+            {form.id ? "Simpan" : "+ Tambah"}
           </button>
+          {form.id && (
+            <button
+              onClick={resetForm}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-3 rounded-lg font-medium"
+            >
+              Batal
+            </button>
+          )}
         </div>
       </div>
 
@@ -217,17 +202,23 @@ export default function Employee() {
               <th className="p-3 text-left">Jabatan</th>
               <th className="p-3 text-left">Telepon</th>
               <th className="p-3 text-left">Username</th>
-              <th className="p-3 text-center w-24">Aksi</th>
+              <th className="p-3 text-center w-32">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {employees.map((e) => (
-              <tr key={e.id} className="border-t hover:bg-gray-50 transition-colors">
-                <td className="p-3">{e.name}</td>
-                <td className="p-3">{e.position}</td>
+              <tr key={e.id} className="border-t hover:bg-gray-50">
+                <td className="p-3">{e.fullName}</td>
+                <td className="p-3">{e.position?.name}</td>
                 <td className="p-3">{e.phone}</td>
                 <td className="p-3">{e.username}</td>
-                <td className="p-3 text-center">
+                <td className="p-3 text-center space-x-3">
+                  <button
+                    onClick={() => editEmployee(e)}
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => deleteEmployee(e.id)}
                     className="text-red-600 hover:text-red-700 font-medium"
@@ -239,7 +230,10 @@ export default function Employee() {
             ))}
             {employees.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center p-6 text-gray-500 italic">
+                <td
+                  colSpan={5}
+                  className="text-center p-6 text-gray-500 italic"
+                >
                   Belum ada data karyawan
                 </td>
               </tr>
