@@ -1,12 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useEffect,useState } from "react";
 import Select from "react-select";
+import { listBus } from "@/actions/bus";
+import { listEmployees } from "@/actions/employee";
+import { listCustomers} from "@/actions/customer";
 
 export default function ScheduleInputPage() {
   const [selectedBus, setSelectedBus] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  
+  const [buses, setBuses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   const [form, setForm] = useState({
-    customer: "",
-    bus: "",
+    customer: null,
+    bus: null,
     pickup: "",
     destination: "",
     seats: "",
@@ -14,52 +23,70 @@ export default function ScheduleInputPage() {
     price: "",
     start: "",
     end: "",
-    driver: "",
-    conductor: "",
-    sales: "",
+    driver: null,
+    conductor: null,
+    sales: null,
     legrest: false,
   });
   const [scheduleList, setScheduleList] = useState([
-  {
-    id: 1,
-    customer: "PT. Maju Jaya",
-    bus: "Bus Pariwisata 01",
-    pickup: "Jl. Pahlawan No.10",
-    destination: "Malang",
-    seats: "45",
-    dp: 3000000,
-    price: 7500000,
-    start: "2025-11-02T07:00",
-    end: "2025-11-02T21:00",
-    driver: "Budi",
-    conductor: "Andi",
-    sales: "Rina",
-    options: { legrest: true },
-  },
-  {
-    id: 2,
-    customer: "SMAN 5 Surabaya",
-    bus: "Bus Pariwisata 02",
-    pickup: "Sekolah SMAN 5 Surabaya",
-    destination: "Batu",
-    seats: "40",
-    dp: 2500000,
-    price: 7000000,
-    start: "2025-11-03T06:30",
-    end: "2025-11-03T20:00",
-    driver: "Slamet",
-    conductor: "Joko",
-    sales: "Tina",
-    options: { legrest: false },
-  },
+ 
 ]);
+  async function refreshBus() {
+      setLoading(true);
+      const res = await listBus();
+      if (res.ok) {
+        const mapped = res.data.map((bus) => ({
+          value: bus.id,
+          label: bus.name || `Bus ${bus.id}`,
+        }));
+        setBuses(mapped);
+      } else {
+        Swal.fire({ icon: "error", title: "Error", text: res.error });
+      }
+      setLoading(false);
+  }
+  async function refreshEmployee() {
+      setLoading(true);
+      const res = await listEmployees();
+      if (res.ok) {
+        const mapped = res.data.map((employee) => ({
+          value: employee.id,
+          label: employee.fullName || `employee ${employee.id}`,
+        }));
+        setEmployees(mapped);
+      } else {
+        Swal.fire({ icon: "error", title: "Error", text: res.error });
+      }
+      setLoading(false);
+  }
+  async function refreshCustomer() {
+      setLoading(true);
+      const res = await listCustomers();
+      if (res.ok) {
+        const mapped = res.data.map((customer) => ({
+          value: customer.id,
+          label: customer.name || `customer ${customer.id}`,
+        }));
+        setCustomers(mapped);
+      } else {
+        Swal.fire({ icon: "error", title: "Error", text: res.error });
+      }
+      setLoading(false);
+  }
 
 
-  const busOptions = [
-    { value: "bus01", label: "Bus Pariwisata 01" },
-    { value: "bus02", label: "Bus Pariwisata 02" },
-    { value: "bus03", label: "Bus Executive 03" },
-  ];
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setTimeout(() => {
+        refreshBus();
+        refreshEmployee();
+        refreshCustomer();
+      }, 0);
+    }
+  }, []);
+
+
+  
 
   const handlePrint = (schedule) => {
     const printWindow = window.open("", "_blank");
@@ -186,24 +213,26 @@ export default function ScheduleInputPage() {
         <div className="grid md:grid-cols-4 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-gray-700 font-medium mb-1">Nama Customer</label>
-            <input
-              type="text"
-              placeholder="Nama Customer"
-              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
+            <Select
+              options={customers}
               value={form.customer}
-              onChange={(e) => setForm({ ...form, customer: e.target.value })}
-            />
+              onChange={(selected) => setForm({ ...form, customer: selected })}
+              placeholder={loading ? "Memuat Customer..." : "Pilih Customer..."}
+              isLoading={loading}
+              isClearable
+              />
           </div>
 
           <div>
             <label className="block text-gray-700 font-medium mb-1">Armada</label>
             <Select
-              options={busOptions}
+              options={buses}
               value={selectedBus}
               onChange={setSelectedBus}
-              placeholder="Pilih Bus..."
+              placeholder={loading ? "Memuat Armada..." : "Pilih Armada..."}
+              isLoading={loading}
               isClearable
-            />
+              />
           </div>
           <div>
             <label className="block text-gray-700 font-medium mb-1">Waktu Penjemputan</label>
@@ -297,36 +326,39 @@ export default function ScheduleInputPage() {
             />
           </div>
 
-          {/* <div>
-            <label className="block text-gray-700 font-medium mb-1">Supir</label>
-            <input
-              type="text"
-              placeholder="Supir"
-              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
-              value={form.driver}
-              onChange={(e) => setForm({ ...form, driver: e.target.value })}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Driver</label>
+            <Select
+            options={employees}
+            value={form.driver}
+            onChange={(selected) => setForm({ ...form, driver: selected })}
+            placeholder={loading ? "Memuat Driver..." : "Pilih Driver..."}
+            isLoading={loading}
+            isClearable
             />
           </div>
 
           <div>
-            <label className="block text-gray-700 font-medium mb-1">Kernet</label>
-            <input
-              type="text"
-              placeholder="Kernet"
-              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
-              value={form.conductor}
-              onChange={(e) => setForm({ ...form, conductor: e.target.value })}
+            <label className="block text-gray-700 font-medium mb-1">Co Driver</label>
+            <Select
+            options={employees}
+            value={form.conductor}
+            onChange={(selected) => setForm({ ...form, conductor: selected })}
+            placeholder={loading ? "Memuat Co Driver..." : "Pilih Co Driver..."}
+            isLoading={loading}
+            isClearable
             />
-          </div> */}
+          </div>
 
           <div>
             <label className="block text-gray-700 font-medium mb-1">Sales</label>
-            <input
-              type="text"
-              placeholder="Sales"
-              className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
-              value={form.sales}
-              onChange={(e) => setForm({ ...form, sales: e.target.value })}
+            <Select
+            options={employees}
+            value={form.sales}
+            onChange={(selected) => setForm({ ...form, sales: selected })}
+            placeholder={loading ? "Memuat Sales..." : "Pilih Sales..."}
+            isLoading={loading}
+            isClearable
             />
           </div>
 
@@ -358,12 +390,13 @@ export default function ScheduleInputPage() {
                 <th className="p-3 text-left font-medium">Penjemputan</th>
                 <th className="p-3 text-left font-medium">Tujuan</th>
                 <th className="p-3 text-left font-medium">Bangku</th>
+                <th className="p-3 text-left font-medium">Tanggal DP</th>
                 <th className="p-3 text-left font-medium">DP</th>
                 <th className="p-3 text-left font-medium">Price</th>
                 <th className="p-3 text-left font-medium">Mulai</th>
                 <th className="p-3 text-left font-medium">Selesai</th>
-                {/* <th className="p-3 text-left font-medium">Supir</th>
-                <th className="p-3 text-left font-medium">Kernet</th> */}
+                <th className="p-3 text-left font-medium">Driver</th>
+                <th className="p-3 text-left font-medium">Co Driver</th>
                 <th className="p-3 text-left font-medium">Sales</th>
                 <th className="p-3 text-center font-medium">Aksi</th>
               </tr>
