@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,32 +11,34 @@ datasource db {
 }
 
 model Bus {
-id        Int       @id @default(autoincrement())
-name      String
-plateNo   String    @unique
-type      BusType
-capacity  Int
-createdAt DateTime  @default(now())
-updatedAt DateTime  @default(now())
+  id        Int       @id @default(autoincrement())
+  name      String
+  plateNo   String    @unique
+  type      BusType
+  capacity  Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
 
+  // relations
+  bookings  Booking[]
 }
 
 enum BusType {
-EKONOMI
-BISNIS
-VIP
-EKSEKUTIF
-SUPER_EKSEKUTIF
+  EKONOMI
+  BISNIS
+  VIP
+  EKSEKUTIF
+  SUPER_EKSEKUTIF
 }
 
 model Position {
   id         Int        @id @default(autoincrement())
   name       String     @unique @db.VarChar(255)
-  employees  Employee[] // Relasi one-to-many ke Employee
+  employees  Employee[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @default(now())
 
-  @@map("position") // nama tabel di DB
+  @@map("position")
 }
 
 model Employee {
@@ -51,8 +50,121 @@ model Employee {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @default(now())
 
-  @@map("employee") // nama tabel di DB
+  // relations tambahan
+  account    Account?
+
+  bookingsAsDriver   Booking[] @relation("DriverBookings")
+  bookingsAsCoDriver Booking[] @relation("CoDriverBookings")
+  bookingsAsSales    Booking[] @relation("SalesBookings")
+
+  @@map("employee")
 }
 
+//////////////////////////////////////////////////////
+// TAMBAHAN ENUM UNTUK BOOKING & PAYMENT
+//////////////////////////////////////////////////////
 
+enum BookingStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
 
+enum PaymentType {
+  DP
+  FULL
+  OTHER
+}
+
+//////////////////////////////////////////////////////
+// TAMBAHAN MODEL (selaras DBML kamu)
+//////////////////////////////////////////////////////
+
+model Account {
+  id           Int       @id @default(autoincrement())
+  employeeId   Int       @unique
+  username     String    @unique
+  passwordHash String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+
+  employee     Employee  @relation(fields: [employeeId], references: [id])
+
+  @@map("account")
+}
+
+model Customer {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String?
+  travel    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now())
+
+  bookings  Booking[]
+
+  @@map("customer")
+}
+
+model Booking {
+  id            Int           @id @default(autoincrement())
+  code          String        @unique
+  customerId    Int
+  busId         Int
+
+  pickupAt      DateTime?
+  pickupAddress String?       @db.Text
+  destination   String?
+
+  seatsBooked   Int?
+  priceTotal    Decimal?      @db.Decimal(12, 2)
+
+  legrest       Boolean       @default(false)
+
+  driverId      Int?
+  driver        Employee?     @relation("DriverBookings", fields: [driverId], references: [id])
+
+  coDriverId    Int?
+  coDriver      Employee?     @relation("CoDriverBookings", fields: [coDriverId], references: [id])
+
+  salesId       Int?
+  sales         Employee?     @relation("SalesBookings", fields: [salesId], references: [id])
+
+  rentStartAt   DateTime?
+  rentEndAt     DateTime?
+  status        BookingStatus @default(DRAFT)
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  deletedAt     DateTime?
+
+  // relations
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  bus           Bus           @relation(fields: [busId], references: [id])
+  payments      Payment[]
+
+  @@index([busId, rentStartAt, rentEndAt])
+  @@index([status])
+  @@index([pickupAt])
+  @@map("booking")
+}
+
+model Payment {
+  id         Int         @id @default(autoincrement())
+  bookingId  Int
+  type       PaymentType
+  amount     Decimal     @db.Decimal(12, 2)
+  paidAt     DateTime
+  notes      String?     @db.Text
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @default(now())
+
+  booking    Booking     @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId, type])
+  @@index([paidAt])
+  @@map("payment")
+}
