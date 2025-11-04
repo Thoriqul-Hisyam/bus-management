@@ -1,0 +1,19 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+export async function revalidateMasterBus() {
+  revalidatePath("/master/bus");
+}
+
+export async function revalidateMasterEmployees() {
+  revalidatePath("/master/employes");
+}
+
+export async function revalidateMasterPositions() {
+  revalidatePath("/master/positions");
+}
+
+export async function revalidateMasterCustomers() {
+  revalidatePath("/master/customers");
+}
