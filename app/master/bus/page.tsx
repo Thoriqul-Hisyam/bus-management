@@ -1,54 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Select from "react-select";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { listBus, createBus, updateBus, deleteBus } from "@/actions/bus";
+
+const busTypeOptions = [
+  { value: "EKONOMI", label: "Ekonomi" },
+  { value: "BISNIS", label: "Bisnis" },
+  { value: "VIP", label: "VIP" },
+  { value: "EKSEKUTIF", label: "Eksekutif" },
+  { value: "SUPER_EKSEKUTIF", label: "Super Eksekutif" },
+];
+
+const selectStyle = {
+  control: (provided: any) => ({
+    ...provided,
+    minHeight: "44px",
+    borderColor: "#d1d5db",
+    borderRadius: "0.5rem",
+    boxShadow: "none",
+    "&:hover": { borderColor: "#3b82f6" },
+  }),
+};
 
 export default function BusPage() {
-  const [buses, setBuses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [buses, setBuses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
-    id: null,
+    id: null as number | null,
     name: "",
     plateNo: "",
-    type: null,
+    type: null as { value: string; label: string } | null,
     capacity: "",
   });
 
-  const busTypeOptions = [
-    { value: "EKONOMI", label: "Ekonomi" },
-    { value: "BISNIS", label: "Bisnis" },
-    { value: "VIP", label: "VIP" },
-    { value: "EKSEKUTIF", label: "Eksekutif" },
-    { value: "SUPER_EKSEKUTIF", label: "Super Eksekutif" },
-  ];
-
-  const selectStyle = {
-    control: (provided) => ({
-      ...provided,
-      minHeight: "44px",
-      borderColor: "#d1d5db",
-      borderRadius: "0.5rem",
-      boxShadow: "none",
-      "&:hover": { borderColor: "#3b82f6" },
-    }),
-  };
-
-  // 🔄 Fetch data dari DB
-  const fetchBuses = async () => {
+  async function refresh() {
     setLoading(true);
-    const res = await fetch("/api/bus");
-    const data = await res.json();
-    setBuses(data);
+    const res = await listBus();
+    if (res.ok) setBuses(res.data);
+    else Swal.fire({ icon: "error", title: "Error", text: res.error });
     setLoading(false);
-  };
+  }
 
   useEffect(() => {
-    fetchBuses();
+    refresh();
   }, []);
 
-  // ✅ Tambah / Update
   const handleSave = async () => {
     if (!form.name || !form.plateNo || !form.type) {
       Swal.fire({
@@ -60,33 +60,33 @@ export default function BusPage() {
       return;
     }
 
-    const method = form.id ? "PUT" : "POST";
-    const res = await fetch("/api/bus", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: form.id,
+    startTransition(async () => {
+      const payload = {
+        id: form.id ?? undefined,
         name: form.name,
         plateNo: form.plateNo,
-        type: form.type.value,
-        capacity: form.capacity || 0,
-      }),
-    });
+        type: form.type!.value,
+        capacity: Number(form.capacity || 0),
+      };
 
-    if (res.ok) {
-      Swal.fire({
-        icon: "success",
-        title: form.id ? "Data diperbarui" : "Data ditambahkan",
-        showConfirmButton: false,
-        timer: 1500,
-      });
-      setForm({ id: null, name: "", plateNo: "", type: null, capacity: "" });
-      fetchBuses();
-    }
+      const res = form.id ? await updateBus(payload) : await createBus(payload);
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          title: form.id ? "Data diperbarui" : "Data ditambahkan",
+          showConfirmButton: false,
+          timer: 1200,
+        });
+        setForm({ id: null, name: "", plateNo: "", type: null, capacity: "" });
+        await refresh();
+      } else {
+        Swal.fire({ icon: "error", title: "Gagal", text: res.error });
+      }
+    });
   };
 
-  // ❌ Hapus
-  const deleteBus = async (id) => {
+  const onDelete = (id: number) => {
     Swal.fire({
       title: "Yakin ingin menghapus data ini?",
       icon: "warning",
@@ -95,31 +95,27 @@ export default function BusPage() {
       cancelButtonColor: "#6b7280",
       confirmButtonText: "Ya, hapus",
       cancelButtonText: "Batal",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        await fetch("/api/bus", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id }),
-        });
-        Swal.fire({
-          icon: "success",
-          title: "Data dihapus",
-          showConfirmButton: false,
-          timer: 1200,
-        });
-        fetchBuses();
-      }
+    }).then((r) => {
+      if (!r.isConfirmed) return;
+      startTransition(async () => {
+        const res = await deleteBus(id);
+        if (res.ok) {
+          Swal.fire({ icon: "success", title: "Data dihapus", timer: 1000, showConfirmButton: false });
+          await refresh();
+        } else {
+          Swal.fire({ icon: "error", title: "Gagal", text: res.error });
+        }
+      });
     });
   };
 
-  const editBus = (bus) => {
+  const editBus = (b: any) => {
     setForm({
-      id: bus.id,
-      name: bus.name,
-      plateNo: bus.plateNo,
-      type: busTypeOptions.find((t) => t.value === bus.type),
-      capacity: bus.capacity,
+      id: b.id,
+      name: b.name,
+      plateNo: b.plateNo,
+      type: busTypeOptions.find((t) => t.value === b.type) ?? null,
+      capacity: String(b.capacity ?? ""),
     });
   };
 
@@ -127,7 +123,6 @@ export default function BusPage() {
     <div className="p-8 bg-gray-50 min-h-screen text-gray-800">
       <h1 className="text-2xl font-bold mb-8">Master Data Bus</h1>
 
-      {/* Form Input */}
       <div className="grid lg:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 gap-4 mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div>
           <label className="text-sm text-gray-600">Nama Bus</label>
@@ -177,14 +172,14 @@ export default function BusPage() {
         <div className="flex items-end">
           <button
             onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full"
+            disabled={isPending}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg w-full"
           >
             {form.id ? "Update" : "+ Tambah"}
           </button>
         </div>
       </div>
 
-      {/* Tabel Data */}
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-blue-50 text-gray-700 uppercase text-xs font-semibold">
@@ -198,17 +193,9 @@ export default function BusPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="5" className="text-center p-4 text-gray-500">
-                  Loading...
-                </td>
-              </tr>
+              <tr><td colSpan={5} className="text-center p-4 text-gray-500">Loading...</td></tr>
             ) : buses.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="text-center p-4 text-gray-500 italic">
-                  Belum ada data
-                </td>
-              </tr>
+              <tr><td colSpan={5} className="text-center p-4 text-gray-500 italic">Belum ada data</td></tr>
             ) : (
               buses.map((b) => (
                 <tr key={b.id} className="border-t hover:bg-gray-50">
@@ -217,18 +204,8 @@ export default function BusPage() {
                   <td className="p-3">{b.type}</td>
                   <td className="p-3">{b.capacity}</td>
                   <td className="p-3 text-center space-x-3">
-                    <button
-                      onClick={() => editBus(b)}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteBus(b.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Hapus
-                    </button>
+                    <button onClick={() => editBus(b)} className="text-blue-600 hover:text-blue-700">Edit</button>
+                    <button onClick={() => onDelete(b.id)} className="text-red-600 hover:text-red-700">Hapus</button>
                   </td>
                 </tr>
               ))
