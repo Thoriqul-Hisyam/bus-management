@@ -1,6 +1,6 @@
 import "./globals.css";
-import Sidebar from "./components/Sidebar";
-import Navbar from "./components/Navbar";
+import Sidebar from "@/components/Sidebar";
+import Navbar from "@/components/Navbar"; 
 import { ReactNode } from "react";
 export const metadata = {
   title: "Bus Management Dashboard",
