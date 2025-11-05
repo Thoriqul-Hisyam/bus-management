@@ -1,9 +1,12 @@
 "use client";
 import { useEffect,useState } from "react";
 import Select from "react-select";
+import Swal from "sweetalert2";
 import { listBus } from "@/actions/bus";
 import { listEmployees } from "@/actions/employee";
 import { listCustomers} from "@/actions/customer";
+import { createSchedule, listSchedules, deleteSchedule } from "@/actions/schedule";
+
 
 export default function ScheduleInputPage() {
   const [selectedBus, setSelectedBus] = useState(null);
@@ -16,9 +19,11 @@ export default function ScheduleInputPage() {
   const [form, setForm] = useState({
     customer: null,
     bus: null,
+    datePickup: "",
     pickup: "",
     destination: "",
     seats: "",
+    tanggalDP: "",
     dp: "",
     price: "",
     start: "",
@@ -74,6 +79,18 @@ export default function ScheduleInputPage() {
       setLoading(false);
   }
 
+  async function refreshSchedules() {
+    setLoading(true);
+    const res = await listSchedules();
+    if (res.ok) {
+      setScheduleList(res.data);
+    } else {
+      Swal.fire({ icon: "error", title: "Error", text: res.error });
+    }
+    setLoading(false);
+  }
+
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -81,6 +98,7 @@ export default function ScheduleInputPage() {
         refreshBus();
         refreshEmployee();
         refreshCustomer();
+        refreshSchedules();
       }, 0);
     }
   }, []);
@@ -143,64 +161,73 @@ export default function ScheduleInputPage() {
   };
 
 
-  const addSchedule = () => {
-    if (
-      !form.customer ||
-      !selectedBus ||
-      !form.pickup ||
-      !form.destination ||
-      !form.seats ||
-      !form.dp ||
-      !form.price ||
-      !form.start ||
-      !form.end ||
-      !form.sales
-    ) {
-      alert("Lengkapi semua field sebelum menyimpan!");
-      return;
-    }
+  const addSchedule = async () => {
+  if (!form.customer || !selectedBus || !form.destination) {
+    alert("Lengkapi semua field sebelum menyimpan!");
+    return;
+  }
 
-    const newSchedule = {
-      id: Date.now(),
-      customer: form.customer,
-      bus: selectedBus.label,
-      pickup: form.pickup,
-      destination: form.destination,
-      seats: form.seats,
-      dp: parseInt(form.dp),
-      price: parseInt(form.price),
-      start: new Date(form.start),
-      end: new Date(form.end),
-      driver: form.driver,
-      conductor: form.conductor,
-      sales: form.sales,
-      options: { legrest: form.legrest ? true : null },
-    };
-
-    setScheduleList((prev) => [...prev, newSchedule]);
-    setForm({
-      customer: "",
-      bus: "",
-      pickup: "",
-      destination: "",
-      seats: "",
-      dp: "",
-      price: "",
-      start: "",
-      end: "",
-      driver: "",
-      conductor: "",
-      sales: "",
-      legrest: false,
-    });
-    setSelectedBus(null);
+  const payload = {
+    customerId: form.customer.value,
+    busId: selectedBus.value,
+    pickupAddress: form.pickup,
+    destination: form.destination,
+    seatsBooked: form.seats,
+    priceTotal: form.price,
+    legrest: form.legrest,
+    driverId: form.driver?.value,
+    coDriverId: form.conductor?.value,
+    salesId: form.sales?.value,
+    rentStartAt: form.start,
+    rentEndAt: form.end,
+    pickupAt: form.datePickup || null,
+    status: "CONFIRMED",
+    notes: "",
+    dp: form.dp ? Number(form.dp) : 0, 
+    tanggalDP: form.tanggalDP || null,
   };
 
-  const deleteSchedule = (id) => {
-    if (confirm("Hapus jadwal ini?")) {
-      setScheduleList(scheduleList.filter((item) => item.id !== id));
+  
+
+  const res = await createSchedule(payload);
+    if (res.ok) {
+      Swal.fire("Berhasil", "Jadwal berhasil disimpan", "success");
+      refreshSchedules();
+      setForm({
+        customer: null,
+        bus: null,
+        datePickup: "",
+        pickup: "",
+        destination: "",
+        seats: "",
+        tanggalDP: "",
+        dp: "",
+        price: "",
+        start: "",
+        end: "",
+        driver: null,
+        conductor: null,
+        sales: null,
+        legrest: false,
+      });
+      setSelectedBus(null);
+    } else {
+      Swal.fire("Gagal", res.error, "error");
     }
-  };
+};
+
+
+  const handleDeleteSchedule = async (id) => {
+  if (!confirm("Hapus jadwal ini?")) return;
+  const res = await deleteSchedule(id);
+  if (res.ok) {
+    Swal.fire("Berhasil", "Jadwal berhasil dihapus", "success");
+    refreshSchedules(); 
+  } else {
+    Swal.fire("Gagal", res.error, "error");
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -239,8 +266,8 @@ export default function ScheduleInputPage() {
             <input
               type="datetime-local"
               className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
-              value={form.start}
-              onChange={(e) => setForm({ ...form, start: e.target.value })}
+              value={form.datePickup}
+              onChange={(e) => setForm({ ...form, datePickup: e.target.value })}
             />
           </div>
           <div>
@@ -280,8 +307,8 @@ export default function ScheduleInputPage() {
             <input
               type="datetime-local"
               className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 w-full transition-all"
-              value={form.start}
-              onChange={(e) => setForm({ ...form, start: e.target.value })}
+              value={form.tanggalDP}
+              onChange={(e) => setForm({ ...form, tanggalDP: e.target.value })}
             />
           </div>
           <div>
@@ -380,13 +407,13 @@ export default function ScheduleInputPage() {
           + Tambah Jadwal
         </button>
 
-        {/* Tabel Jadwal */}
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full border-collapse">
             <thead className="bg-blue-50 text-gray-700 text-sm uppercase">
               <tr>
                 <th className="p-3 text-left font-medium">Customer</th>
                 <th className="p-3 text-left font-medium">Armada</th>
+                <th className="p-3 text-left font-medium">Legrest</th>
                 <th className="p-3 text-left font-medium">Penjemputan</th>
                 <th className="p-3 text-left font-medium">Tujuan</th>
                 <th className="p-3 text-left font-medium">Bangku</th>
@@ -406,21 +433,26 @@ export default function ScheduleInputPage() {
                 <tr key={s.id} className="border-t hover:bg-gray-50 transition-all">
                   <td className="p-3">{s.customer}</td>
                   <td className="p-3">{s.bus}</td>
-                  <td className="p-3">{s.pickup}</td>
+                  <td className="p-3">{s.legrest ? "Yes" : "No"}</td>
+                  <td className="p-3">{s.pickupAddress}</td>
                   <td className="p-3">{s.destination}</td>
-                  <td className="p-3 text-center">{s.seats}</td>
-                  <td className="p-3 text-center">Rp {s.dp.toLocaleString()}</td>
-                  <td className="p-3 text-center">Rp {s.price.toLocaleString()}</td>
-                  <td className="p-3">{new Date(s.start).toLocaleString("id-ID")}</td>
-                  <td className="p-3">{new Date(s.end).toLocaleString("id-ID")}</td>
+                  <td className="p-3 text-center">{s.seatsBooked}</td>
+                  <td className="p-3">{s.paidAt}</td>
+                  <td className="p-3 text-center">Rp {s.amount.toLocaleString()}</td>
+                  <td className="p-3 text-center">Rp {s.priceTotal.toLocaleString()}</td>
+                  <td className="p-3">{s.rentStartAt}</td>
+                  <td className="p-3">{s.rentEndAt}</td>
+                  <td className="p-3">{s.driver}</td>
+                  <td className="p-3">{s.coDriver}</td>
                   <td className="p-3">{s.sales}</td>
                   <td className="p-3 text-center flex gap-2 justify-center">
                     <button
-                      onClick={() => deleteSchedule(s.id)}
+                      onClick={() => handleDeleteSchedule(s.id)}
                       className="text-red-500 hover:text-red-700 font-medium"
                     >
                       Hapus
                     </button>
+
                     <button
                       onClick={() => handlePrint(s)}
                       className="text-blue-600 hover:text-blue-800 font-medium"

@@ -10,6 +10,10 @@ export async function revalidateMasterEmployees() {
   revalidatePath("/master/employes");
 }
 
+export async function revalidateMasterSchedules() {
+  revalidatePath("/schedule/input");
+}
+
 export async function revalidateMasterPositions() {
   revalidatePath("/master/positions");
 }

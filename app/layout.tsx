@@ -1,6 +1,6 @@
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
-import Navbar from "@/components/Navbar"; 
+import Navbar from "@/components/Navbar";
 import { ReactNode } from "react";
 export const metadata = {
   title: "Bus Management Dashboard",
@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html>
       <body className="flex bg-gray-100 min-h-screen">
         <Sidebar />
         <div className="flex-1 flex flex-col">

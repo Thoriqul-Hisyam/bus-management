@@ -17,7 +17,8 @@ export async function listBus(): Promise<Result<any[]>> {
 export async function createBus(input: unknown): Promise<Result<any>> {
   try {
     const parsed = BusCreateSchema.safeParse(input);
-    if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
+    if (!parsed.success)
+      return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
     const { name, plateNo, type, capacity } = parsed.data;
 
@@ -28,7 +29,10 @@ export async function createBus(input: unknown): Promise<Result<any>> {
     revalidateMasterBus();
     return ok(created);
   } catch (e: any) {
-    if (e instanceof prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+    if (
+      e instanceof prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
       if ((e.meta?.target as string[])?.includes("plateNo")) {
         return err("Nomor polisi sudah digunakan.");
       }
@@ -40,7 +44,8 @@ export async function createBus(input: unknown): Promise<Result<any>> {
 export async function updateBus(input: unknown): Promise<Result<any>> {
   try {
     const parsed = BusUpdateSchema.safeParse(input);
-    if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
+    if (!parsed.success)
+      return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
     const { id, name, plateNo, type, capacity } = parsed.data;
 
@@ -52,7 +57,10 @@ export async function updateBus(input: unknown): Promise<Result<any>> {
     revalidateMasterBus();
     return ok(updated);
   } catch (e: any) {
-    if (e instanceof prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+    if (
+      e instanceof prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
       if ((e.meta?.target as string[])?.includes("plateNo")) {
         return err("Nomor polisi sudah digunakan.");
       }
@@ -61,7 +69,9 @@ export async function updateBus(input: unknown): Promise<Result<any>> {
   }
 }
 
-export async function deleteBus(id: number): Promise<Result<{ message: string }>> {
+export async function deleteBus(
+  id: number
+): Promise<Result<{ message: string }>> {
   try {
     await prisma.bus.delete({ where: { id } });
     revalidateMasterBus();
