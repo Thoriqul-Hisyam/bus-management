@@ -14,6 +14,7 @@ import {
   FaUsers,
   FaUserTie,
   FaUserFriends,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 
 function linkClass(currentPath: string, path: string) {
@@ -58,7 +59,11 @@ export default function Sidebar() {
         </h1>
 
         <nav className="flex flex-col gap-2">
-          <Link href="/" className={linkClass(pathname, "/")} onClick={() => setOpen(false)}>
+          <Link
+            href="/"
+            className={linkClass(pathname, "/")}
+            onClick={() => setOpen(false)}
+          >
             <FaHome /> Dashboard
           </Link>
 
@@ -68,6 +73,13 @@ export default function Sidebar() {
             onClick={() => setOpen(false)}
           >
             <FaCalendarAlt /> Input Jadwal
+          </Link>
+          <Link
+            href="/repayment"
+            className={linkClass(pathname, "/repayment")}
+            onClick={() => setOpen(false)}
+          >
+            <FaFileInvoiceDollar /> Tagihan Pembayaran
           </Link>
 
           <Link
@@ -98,7 +110,7 @@ export default function Sidebar() {
                   className={linkClass(pathname, "/master/bus")}
                   onClick={() => setOpen(false)}
                 >
-                  <FaBus /> Bus
+                  <FaBus /> Armada
                 </Link>
                 <Link
                   href="/master/employees"

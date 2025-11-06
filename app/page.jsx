@@ -182,7 +182,7 @@ export default function ScheduleCheckPage() {
 
       <div className="mx-auto bg-white rounded-2xl shadow-md p-6">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
-          Cek Jadwal Bus
+          Cek Jadwal Armada
         </h2>
 
         {/* tombol view */}
@@ -280,7 +280,7 @@ export default function ScheduleCheckPage() {
                     <p className="font-semibold text-gray-800">{selectedEvent.sales}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Bus</p>
+                    <p className="text-sm text-gray-500">Armada</p>
                     <p className="font-semibold text-gray-800">{selectedEvent.bus}</p>
                   </div>
                 </div>

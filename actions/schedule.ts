@@ -149,6 +149,60 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
   }
 }
 
+export async function updateStatusSchedule(
+  id: number,
+  status: any
+): Promise<Result<any>> {
+  try {
+    if (!id) return err("ID booking tidak valid");
+    if (!status) return err("Status tidak boleh kosong");
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { payments: true, customer: true, bus: true },
+    });
+    if (!booking) return err("Booking tidak ditemukan");
+
+    const updated = await prisma.booking.update({
+      where: { id },
+      data: { status },
+      include: { customer: true, bus: true },
+    });
+
+    if (status === "COMPLETED") {
+      const finalPaymentExists = booking.payments.some(
+        (p) => p.type === "FULL"
+      );
+      if (!finalPaymentExists) {
+        const dpPayment = booking.payments.find((p) => p.type === "DP");
+        const dpAmount = dpPayment?.amount ?? 0;
+        const finalAmount = booking.priceTotal - dpAmount;
+
+        if (finalAmount > 0) {
+          await prisma.payment.create({
+            data: {
+              bookingId: id,
+              type: "FULL",
+              amount: finalAmount,
+              paidAt: new Date(), // dianggap dibayar penuh saat status LUNAS
+              notes: `Pembayaran Final untuk booking #${id}`,
+            },
+          });
+        }
+      }
+    }
+
+    // Revalidate cache jika ada
+    if (typeof revalidateMasterSchedules === "function") {
+      await revalidateMasterSchedules();
+    }
+
+    return ok(updated);
+  } catch (e: any) {
+    return err(e.message ?? "Gagal memperbarui status schedule");
+  }
+}
+
 // DELETE
 export async function deleteSchedule(
   id: number

@@ -4,8 +4,6 @@ import { useEffect, useState, useTransition } from "react";
 import Select from "react-select";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import { listBus, createBus, updateBus, deleteBus } from "@/actions/bus";
-
 const busTypeOptions = [
   { value: "EKONOMI", label: "Ekonomi" },
   { value: "BISNIS", label: "Bisnis" },
@@ -100,7 +98,12 @@ export default function BusPage() {
       startTransition(async () => {
         const res = await deleteBus(id);
         if (res.ok) {
-          Swal.fire({ icon: "success", title: "Data dihapus", timer: 1000, showConfirmButton: false });
+          Swal.fire({
+            icon: "success",
+            title: "Data dihapus",
+            timer: 1000,
+            showConfirmButton: false,
+          });
           await refresh();
         } else {
           Swal.fire({ icon: "error", title: "Gagal", text: res.error });
@@ -193,9 +196,20 @@ export default function BusPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="text-center p-4 text-gray-500">Loading...</td></tr>
+              <tr>
+                <td colSpan={5} className="text-center p-4 text-gray-500">
+                  Loading...
+                </td>
+              </tr>
             ) : buses.length === 0 ? (
-              <tr><td colSpan={5} className="text-center p-4 text-gray-500 italic">Belum ada data</td></tr>
+              <tr>
+                <td
+                  colSpan={5}
+                  className="text-center p-4 text-gray-500 italic"
+                >
+                  Belum ada data
+                </td>
+              </tr>
             ) : (
               buses.map((b) => (
                 <tr key={b.id} className="border-t hover:bg-gray-50">
@@ -204,8 +218,18 @@ export default function BusPage() {
                   <td className="p-3">{b.type}</td>
                   <td className="p-3">{b.capacity}</td>
                   <td className="p-3 text-center space-x-3">
-                    <button onClick={() => editBus(b)} className="text-blue-600 hover:text-blue-700">Edit</button>
-                    <button onClick={() => onDelete(b.id)} className="text-red-600 hover:text-red-700">Hapus</button>
+                    <button
+                      onClick={() => editBus(b)}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(b.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Hapus
+                    </button>
                   </td>
                 </tr>
               ))
