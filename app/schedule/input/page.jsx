@@ -113,36 +113,78 @@ export default function ScheduleInputPage() {
         <head>
           <title>Surat Jalan ${schedule.customer}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            td, th { border: 1px solid black; padding: 6px; font-size: 12px; vertical-align: top; }
-            h2 { text-align: right; margin-bottom: 0; }
-            .logo { width: 120px; }
-            .header { display: flex; justify-content: space-between; align-items: center; }
-            .note { color: red; font-weight: bold; text-align: center; margin-top: 10px; }
-            .footer { text-align: center; font-weight: bold; margin-top: 10px; }
-          </style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          td, th { border: 1px solid black; padding: 6px; font-size: 12px; vertical-align: top; }
+          h2 { margin: 0; text-align: right; }
+          .logo { width: 120px; }
+          .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start; 
+            border-bottom: 2px solid black; 
+            padding-bottom: 10px;
+          }
+          .header-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .header-right {
+            text-align: right;
+          }
+          .address {
+            font-size: 12px; 
+            margin: 0; 
+            line-height: 1.4;
+          }
+          .note { 
+            color: red; 
+            font-weight: bold; 
+            text-align: center; 
+            margin-top: 10px; 
+            font-size: 12px;
+          }
+          .footer { 
+            text-align: center; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            font-size: 12px;
+          }
+        </style>
         </head>
         <body>
-          <div class="header">
-            <img src="https://i.imgur.com/hz4V6Wb.png" class="logo" />
-            <div>
-              <h2>SURAT JALAN</h2>
-              <p>No. ${schedule.id}</p>
-            </div>
-          </div>
+         <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+          <tr>
+            <td style="width:120px; vertical-align:top;">
+              <img id="logo" src="/img/logo.png" style="width:120px;" />
+            </td>
+            <td style="vertical-align:top;">
+              <p style="font-size:16px; margin:0; line-height:1.4;">
+                <strong>Alamat Garasi:</strong><br/>
+                Jl. Merr Boulevard No. 22<br/>
+                Kec. Rungkut, Penjaringan Sari<br/>
+                Kota Surabaya
+              </p>
+            </td>
+            <td style="text-align:right; font-size:16px;vertical-align:top;">
+              <h2 style="margin:0;">SURAT JALAN</h2>
+              <p style="margin:0;">No. ${schedule.id}</p>
+            </td>
+          </tr>
+        </table>
 
-          <p><strong>Alamat Garasi:</strong> Jl. Merr Boulevard No. 22, Kec. Rungkut, Penjaringan Sari, Kota Surabaya</p>
+
 
           <table>
-            <tr><td>Jenis</td><td>JETBUS 5 SHD</td><td>Tujuan / Rute</td><td>${schedule.destination}</td></tr>
-            <tr><td>Nopol</td><td>${schedule.bus}</td><td>Sangu</td><td>Rp ${schedule.price.toLocaleString()}</td></tr>
-            <tr><td>Driver</td><td>${schedule.driver || "-"}</td><td>Tagihan</td><td></td></tr>
-            <tr><td>Co Driver</td><td>${schedule.conductor || "-"}</td><td>Premi Driver</td><td></td></tr>
+            <tr><td>Armada</td><td>${schedule.bus}</td><td>Tujuan / Rute</td><td>${schedule.destination}</td></tr>
+            <tr><td>Nopol</td><td>${schedule.bus}</td><td>Sangu</td><td>Rp </td></tr>
+            <tr><td>Driver</td><td>${schedule.driver || "-"}</td><td>Tagihan</td><td>Rp ${schedule.priceTotal.toLocaleString()}</td></tr>
+            <tr><td>Co Driver</td><td>${schedule.coDriver || "-"}</td><td>Premi Driver</td><td></td></tr>
             <tr><td>Panitia</td><td>${schedule.customer}</td><td>Premi Co Driver</td><td></td></tr>
-            <tr><td>Tgl. Berangkat</td><td>${new Date(schedule.start).toLocaleDateString("id-ID")}</td><td>UM Driver</td><td></td></tr>
-            <tr><td>Tgl. Pulang</td><td>${new Date(schedule.end).toLocaleDateString("id-ID")}</td><td>UM Co Driver</td><td></td></tr>
-            <tr><td>Penjemputan</td><td>${schedule.pickup}</td><td>BBM</td><td></td></tr>
+            <tr><td>Tgl. Berangkat</td><td>${new Date(schedule.rentStartAt).toLocaleDateString("id-ID")}</td><td>UM Driver</td><td></td></tr>
+            <tr><td>Tgl. Pulang</td><td>${new Date(schedule.rentEndAt).toLocaleDateString("id-ID")}</td><td>UM Co Driver</td><td></td></tr>
+            <tr><td>Penjemputan</td><td>${schedule.pickupAddress}</td><td>BBM</td><td></td></tr>
             <tr><td>Keterangan</td><td> - </td><td>Total</td><td></td></tr>
           </table>
 
@@ -153,7 +195,14 @@ export default function ScheduleInputPage() {
 
           <p class="footer">KAMI HARAP AGAR DI ISI</p>
 
-          <script>window.print();</script>
+          <script>
+          const logo = document.getElementById('logo');
+          if (logo.complete) {
+            window.print();
+          } else {
+            logo.onload = () => window.print();
+          }
+        </script>
         </body>
       </html>
     `);
