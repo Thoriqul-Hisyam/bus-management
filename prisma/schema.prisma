@@ -44,7 +44,7 @@ model Position {
 model Employee {
   id         Int        @id @default(autoincrement())
   fullName   String     @db.VarChar(255)
-  phone      String     @db.VarChar(255)
+  phone      String?     @db.VarChar(255)
   positionId Int
   position   Position   @relation(fields: [positionId], references: [id])
   createdAt  DateTime   @default(now())
