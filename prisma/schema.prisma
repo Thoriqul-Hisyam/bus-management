@@ -10,25 +10,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model BusType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  buses     Bus[]
+  
+  @@map("bus_type")
+}
+
 model Bus {
   id        Int       @id @default(autoincrement())
   name      String
   plateNo   String    @unique
-  type      BusType
   capacity  Int
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now())
 
-  // relations
-  bookings  Booking[]
-}
+  busTypeId Int
+  busType   BusType   @relation(fields: [busTypeId], references: [id])
 
-enum BusType {
-  EKONOMI
-  BISNIS
-  VIP
-  EKSEKUTIF
-  SUPER_EKSEKUTIF
+  bookings  Booking[]
 }
 
 model Position {
