@@ -24,3 +24,6 @@ export async function revalidateMasterCustomers() {
 export async function revalidatePayments() {
   revalidatePath("/master/customers");
 }
+export async function revalidateTripSheet() {
+  revalidatePath("/trip_sheet");
+}

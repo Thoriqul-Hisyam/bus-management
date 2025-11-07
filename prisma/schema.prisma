@@ -105,7 +105,6 @@ model Customer {
   updatedAt DateTime  @default(now())
 
   bookings  Booking[]
-
   @@map("customer")
 }
 
@@ -145,11 +144,13 @@ model Booking {
   customer      Customer      @relation(fields: [customerId], references: [id])
   bus           Bus           @relation(fields: [busId], references: [id])
   payments      Payment[]
+  tripSheets  TripSheet[]
 
   @@index([busId, rentStartAt, rentEndAt])
   @@index([status])
   @@index([pickupAt])
   @@map("booking")
+  
 }
 
 model Payment {
@@ -167,4 +168,26 @@ model Payment {
   @@index([bookingId, type])
   @@index([paidAt])
   @@map("payment")
+}
+
+model TripSheet {
+  id              Int       @id @default(autoincrement())
+
+  bookingId       Int       @unique
+
+  description     String?   // keterangan
+  sangu           Decimal?  @db.Decimal(12, 2)
+  premiDriver     Decimal?  @db.Decimal(12, 2)
+  premiCoDriver   Decimal?  @db.Decimal(12, 2)
+  umDriver        Decimal?  @db.Decimal(12, 2)
+  umCoDriver      Decimal?  @db.Decimal(12, 2)
+  bbm             Decimal?  @db.Decimal(12, 2)
+  total           Decimal?  @db.Decimal(12, 2)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  booking         Booking   @relation(fields: [bookingId], references: [id])
+  
+  @@map("tripsheet")
 }

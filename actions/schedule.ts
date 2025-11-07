@@ -49,6 +49,43 @@ export async function listSchedules(): Promise<Result<any[]>> {
   }
 }
 
+export async function getScheduleById(id: number): Promise<Result<any>> {
+  try {
+    const r = await prisma.booking.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        bus: true,
+        driver: true,
+        coDriver: true,
+        sales: true,
+      },
+    });
+
+    if (!r) return err("Data booking tidak ditemukan");
+
+    const safeRow = {
+      ...r,
+      priceTotal: r.priceTotal ? Number(r.priceTotal) : 0,
+      rentStartAt: r.rentStartAt?.toISOString() ?? null,
+      rentEndAt: r.rentEndAt?.toISOString() ?? null,
+      pickupAt: r.pickupAt?.toISOString() ?? null,
+      createdAt: r.createdAt?.toISOString() ?? null,
+      updatedAt: r.updatedAt?.toISOString() ?? null,
+      customer: r.customer?.name ?? null,
+      bus: r.bus?.name ?? null,
+      plateNo: r.bus?.plateNo ?? null,
+      driver: r.driver?.fullName ?? null,
+      coDriver: r.coDriver?.fullName ?? null,
+      sales: r.sales?.fullName ?? null,
+    };
+
+    return ok(safeRow);
+  } catch (e: any) {
+    return err(e.message ?? "Gagal mengambil data booking");
+  }
+}
+
 // CREATE
 export async function createSchedule(input: unknown): Promise<Result<any>> {
   try {
