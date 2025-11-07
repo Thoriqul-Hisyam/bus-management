@@ -6,9 +6,9 @@ const prisma = new PrismaClient();
 async function main() {
   const roles = [
     { name: "superadmin", username: "superadmin", fullName: "Super Admin" },
-    { name: "manager",    username: "manager",    fullName: "Manager" },
-    { name: "finance",    username: "finance",    fullName: "Finance" },
-    { name: "admin",      username: "admin",      fullName: "Admin Armada" },
+    { name: "manager", username: "manager", fullName: "Manager" },
+    { name: "finance", username: "finance", fullName: "Finance" },
+    { name: "admin", username: "admin", fullName: "Admin Armada" },
   ];
 
   for (const r of roles) {
@@ -29,7 +29,7 @@ async function main() {
         data: {
           fullName: r.fullName,
           positionId: position.id,
-          phone: null,
+          phone: "123",
         },
       });
     }
