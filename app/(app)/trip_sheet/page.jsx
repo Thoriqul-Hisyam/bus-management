@@ -109,7 +109,7 @@ export default function ScheduleInputPage() {
 
           <table>
             <tr><td>Armada</td><td>${schedule.bus}</td><td>Tujuan / Rute</td><td>${schedule.destination}</td></tr>
-            <tr><td>Nopol</td><td>${schedule.bus}</td><td>Sangu</td><td>Rp ${schedule.sangu.toLocaleString()}</td></tr>
+            <tr><td>Nopol</td><td>${schedule.plateNo}</td><td>Sangu</td><td>Rp ${schedule.sangu.toLocaleString()}</td></tr>
             <tr><td>Driver</td><td>${schedule.driver || "-"}</td><td>Tagihan</td><td>Rp ${schedule.priceTotal.toLocaleString()}</td></tr>
             <tr><td>Co Driver</td><td>${schedule.coDriver || "-"}</td><td>Premi Driver</td><td>Rp ${schedule.premiDriver.toLocaleString()}</td></tr>
             <tr><td>Panitia</td><td>${schedule.customer}</td><td>Premi Co Driver</td><td>Rp ${schedule.premiCoDriver.toLocaleString()}</td></tr>

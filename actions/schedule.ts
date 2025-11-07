@@ -17,7 +17,7 @@ export async function listSchedules(): Promise<Result<any[]>> {
         driver: true,
         coDriver: true,
         sales: true,
-        tripSheet: true,
+        payments: true,
       },
       orderBy: { id: "desc" },
     });
@@ -96,6 +96,7 @@ export async function listSchedulesTripSheet(): Promise<Result<any[]>> {
       updatedAt: r.updatedAt?.toISOString() ?? null,
       customer: r.customer?.name ?? null,
       bus: r.bus?.name ?? null,
+      plateNo: r.bus?.plateNo ?? null,
       driver: r.driver?.fullName ?? null,
       coDriver: r.coDriver?.fullName ?? null,
       sales: r.sales?.fullName ?? null,
