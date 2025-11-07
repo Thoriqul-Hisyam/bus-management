@@ -4,14 +4,9 @@ import { useEffect, useState, useTransition } from "react";
 import Select from "react-select";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import { listBus, createBus, updateBus, deleteBus } from "@/actions/bus";
-const busTypeOptions = [
-  { value: "EKONOMI", label: "Ekonomi" },
-  { value: "BISNIS", label: "Bisnis" },
-  { value: "VIP", label: "VIP" },
-  { value: "EKSEKUTIF", label: "Eksekutif" },
-  { value: "SUPER_EKSEKUTIF", label: "Super Eksekutif" },
-];
+import { listBus, createBus, updateBus, deleteBus, listBusTypes } from "@/actions/bus";
+
+type Option = { value: number; label: string };
 
 const selectStyle = {
   control: (provided: any) => ({
@@ -28,11 +23,14 @@ export default function BusPage() {
   const [buses, setBuses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+
+  const [busTypeOptions, setBusTypeOptions] = useState<Option[]>([]);
+
   const [form, setForm] = useState({
     id: null as number | null,
     name: "",
     plateNo: "",
-    type: null as { value: string; label: string } | null,
+    busType: null as Option | null, // ← ganti dari enum ke option
     capacity: "",
   });
 
@@ -44,16 +42,28 @@ export default function BusPage() {
     setLoading(false);
   }
 
+  async function loadBusTypes() {
+    const res = await listBusTypes();
+    if (res.ok) {
+      setBusTypeOptions(res.data.map((r) => ({ value: r.id, label: r.name })));
+    } else {
+      Swal.fire({ icon: "error", title: "Error", text: res.error });
+    }
+  }
+
   useEffect(() => {
-    refresh();
+    // load paralel
+    (async () => {
+      await Promise.all([loadBusTypes(), refresh()]);
+    })();
   }, []);
 
   const handleSave = async () => {
-    if (!form.name || !form.plateNo || !form.type) {
+    if (!form.name || !form.plateNo || !form.busType) {
       Swal.fire({
         icon: "warning",
         title: "Data belum lengkap",
-        text: "Nama, Nomor Polisi, dan Tipe wajib diisi!",
+        text: "Nama, Nomor Polisi, dan Jenis Armada wajib diisi!",
         confirmButtonColor: "#2563eb",
       });
       return;
@@ -64,7 +74,7 @@ export default function BusPage() {
         id: form.id ?? undefined,
         name: form.name,
         plateNo: form.plateNo,
-        type: form.type!.value,
+        busTypeId: form.busType!.value, // ← kirim id
         capacity: Number(form.capacity || 0),
       };
 
@@ -77,7 +87,7 @@ export default function BusPage() {
           showConfirmButton: false,
           timer: 1200,
         });
-        setForm({ id: null, name: "", plateNo: "", type: null, capacity: "" });
+        setForm({ id: null, name: "", plateNo: "", busType: null, capacity: "" });
         await refresh();
       } else {
         Swal.fire({ icon: "error", title: "Gagal", text: res.error });
@@ -114,11 +124,13 @@ export default function BusPage() {
   };
 
   const editBus = (b: any) => {
+    // b sudah include busType
+    const opt = b.busType ? busTypeOptions.find((t) => t.value === b.busType.id) ?? null : null;
     setForm({
       id: b.id,
       name: b.name,
       plateNo: b.plateNo,
-      type: busTypeOptions.find((t) => t.value === b.type) ?? null,
+      busType: opt,
       capacity: String(b.capacity ?? ""),
     });
   };
@@ -151,13 +163,13 @@ export default function BusPage() {
         </div>
 
         <div>
-          <label className="text-sm text-gray-600">Tipe Bus</label>
+          <label className="text-sm text-gray-600">Jenis Armada</label>
           <Select
             styles={selectStyle}
             options={busTypeOptions}
-            value={form.type}
-            onChange={(selected) => setForm({ ...form, type: selected })}
-            placeholder="Pilih tipe..."
+            value={form.busType}
+            onChange={(selected) => setForm({ ...form, busType: selected as Option | null })}
+            placeholder="Pilih jenis..."
             isClearable
           />
         </div>
@@ -190,7 +202,7 @@ export default function BusPage() {
             <tr>
               <th className="p-3 text-left">Nama Bus</th>
               <th className="p-3 text-left">No. Polisi</th>
-              <th className="p-3 text-left">Tipe</th>
+              <th className="p-3 text-left">Jenis Armada</th>
               <th className="p-3 text-left">Kapasitas</th>
               <th className="p-3 text-center w-24">Aksi</th>
             </tr>
@@ -204,10 +216,7 @@ export default function BusPage() {
               </tr>
             ) : buses.length === 0 ? (
               <tr>
-                <td
-                  colSpan={5}
-                  className="text-center p-4 text-gray-500 italic"
-                >
+                <td colSpan={5} className="text-center p-4 text-gray-500 italic">
                   Belum ada data
                 </td>
               </tr>
@@ -216,7 +225,7 @@ export default function BusPage() {
                 <tr key={b.id} className="border-t hover:bg-gray-50">
                   <td className="p-3">{b.name}</td>
                   <td className="p-3">{b.plateNo}</td>
-                  <td className="p-3">{b.type}</td>
+                  <td className="p-3">{b.busType?.name ?? "-"}</td>
                   <td className="p-3">{b.capacity}</td>
                   <td className="p-3 text-center space-x-3">
                     <button

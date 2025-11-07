@@ -4,10 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { ok, err, type Result } from "@/lib/result";
 import { BusCreateSchema, BusUpdateSchema } from "@/validators/bus";
 import { revalidateMasterBus } from "./_utils";
+import { Prisma } from "@prisma/client"; // untuk deteksi P2002, dll
 
 export async function listBus(): Promise<Result<any[]>> {
   try {
-    const data = await prisma.bus.findMany({ orderBy: { id: "desc" } });
+    const data = await prisma.bus.findMany({
+      orderBy: { id: "desc" },
+      include: { busType: true }, // ← penting, agar bisa tampilkan nama tipe
+    });
     return ok(data);
   } catch (e: any) {
     return err(`Gagal mengambil data bus: ${e.message ?? e}`);
@@ -20,19 +24,17 @@ export async function createBus(input: unknown): Promise<Result<any>> {
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
-    const { name, plateNo, type, capacity } = parsed.data;
+    const { name, plateNo, capacity, busTypeId } = parsed.data;
 
     const created = await prisma.bus.create({
-      data: { name, plateNo, type, capacity },
+      data: { name, plateNo, capacity, busTypeId },
+      include: { busType: true },
     });
 
     revalidateMasterBus();
     return ok(created);
   } catch (e: any) {
-    if (
-      e instanceof prisma.PrismaClientKnownRequestError &&
-      e.code === "P2002"
-    ) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       if ((e.meta?.target as string[])?.includes("plateNo")) {
         return err("Nomor polisi sudah digunakan.");
       }
@@ -47,20 +49,18 @@ export async function updateBus(input: unknown): Promise<Result<any>> {
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
-    const { id, name, plateNo, type, capacity } = parsed.data;
+    const { id, name, plateNo, capacity, busTypeId } = parsed.data;
 
     const updated = await prisma.bus.update({
       where: { id },
-      data: { name, plateNo, type, capacity },
+      data: { name, plateNo, capacity, busTypeId },
+      include: { busType: true },
     });
 
     revalidateMasterBus();
     return ok(updated);
   } catch (e: any) {
-    if (
-      e instanceof prisma.PrismaClientKnownRequestError &&
-      e.code === "P2002"
-    ) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       if ((e.meta?.target as string[])?.includes("plateNo")) {
         return err("Nomor polisi sudah digunakan.");
       }
@@ -78,5 +78,18 @@ export async function deleteBus(
     return ok({ message: "Bus deleted" });
   } catch (e: any) {
     return err(`Gagal menghapus bus: ${e.message ?? e}`);
+  }
+}
+
+/** Tambahan: ambil opsi BusType untuk dropdown */
+export async function listBusTypes(): Promise<Result<Array<{ id: number; name: string }>>> {
+  try {
+    const rows = await prisma.busType.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    });
+    return ok(rows);
+  } catch (e: any) {
+    return err(`Gagal mengambil jenis armada: ${e.message ?? e}`);
   }
 }
