@@ -124,7 +124,7 @@ export default function Sidebar({ role }: { role: Role }) {
                   <FaBus /> Armada
                 </Link>
                 <Link href="/master/bus-type" className={linkClass("/master/bus-type")} onClick={() => setOpen(false)}>
-                  <FaBus /> Jenis Armada
+                  <FaBus /> Tipe Armada
                 </Link>
                 <Link href="/master/employees" className={linkClass("/master/employees")} onClick={() => setOpen(false)}>
                   <FaUserTie /> Karyawan
