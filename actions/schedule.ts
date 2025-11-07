@@ -17,7 +17,7 @@ export async function listSchedules(): Promise<Result<any[]>> {
         driver: true,
         coDriver: true,
         sales: true,
-        payments: true,
+        tripSheet: true,
       },
       orderBy: { id: "desc" },
     });
@@ -41,6 +41,65 @@ export async function listSchedules(): Promise<Result<any[]>> {
       coDriver: r.coDriver?.fullName ?? null,
       sales: r.sales?.fullName ?? null,
       payments: undefined,
+    }));
+
+    return ok(safeRows);
+  } catch (e: any) {
+    return err(e.message ?? "Gagal mengambil data jadwal");
+  }
+}
+export async function listSchedulesTripSheet(): Promise<Result<any[]>> {
+  try {
+    const rows = await prisma.booking.findMany({
+      include: {
+        customer: true,
+        bus: true,
+        driver: true,
+        coDriver: true,
+        sales: true,
+        tripSheets: true,
+      },
+      orderBy: { id: "desc" },
+    });
+
+    const safeRows = rows.map((r) => ({
+      ...r,
+      tripId: r.tripSheets?.[0]?.id ?? null,
+      sangu:
+        r.tripSheets?.[0]?.sangu != null ? Number(r.tripSheets[0].sangu) : null,
+      premiDriver:
+        r.tripSheets?.[0]?.premiDriver != null
+          ? Number(r.tripSheets[0].premiDriver)
+          : null,
+      premiCoDriver:
+        r.tripSheets?.[0]?.premiCoDriver != null
+          ? Number(r.tripSheets[0].premiCoDriver)
+          : null,
+      umDriver:
+        r.tripSheets?.[0]?.umDriver != null
+          ? Number(r.tripSheets[0].umDriver)
+          : null,
+      umCoDriver:
+        r.tripSheets?.[0]?.umCoDriver != null
+          ? Number(r.tripSheets[0].umCoDriver)
+          : null,
+      bbm: r.tripSheets?.[0]?.bbm != null ? Number(r.tripSheets[0].bbm) : null,
+      total:
+        r.tripSheets?.[0]?.total != null ? Number(r.tripSheets[0].total) : null,
+      description: r.tripSheets?.[0]?.description ?? null,
+      priceTotal: r.priceTotal != null ? Number(r.priceTotal) : 0,
+
+      rentStartAt: r.rentStartAt?.toISOString() ?? null,
+      rentEndAt: r.rentEndAt?.toISOString() ?? null,
+      pickupAt: r.pickupAt?.toISOString() ?? null,
+      createdAt: r.createdAt?.toISOString() ?? null,
+      updatedAt: r.updatedAt?.toISOString() ?? null,
+      customer: r.customer?.name ?? null,
+      bus: r.bus?.name ?? null,
+      driver: r.driver?.fullName ?? null,
+      coDriver: r.coDriver?.fullName ?? null,
+      sales: r.sales?.fullName ?? null,
+      tripSheets: undefined,
     }));
 
     return ok(safeRows);
