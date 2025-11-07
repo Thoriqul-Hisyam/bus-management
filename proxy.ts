@@ -1,22 +1,31 @@
-// app/proxy.ts
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me");
+type AppRole = "admin" | "finance" | "manager" | "superadmin";
 
+const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me");
 const PUBLIC = ["/login", "/_next", "/favicon", "/public"];
 
-const RBAC: Array<{ prefix: string; minRole: "admin"|"finance"|"manager"|"superadmin" }> = [
-  { prefix: "/report",          minRole: "finance" },
+type Rule =
+  | { prefix: string; allow: AppRole[] }
+  | { prefix: string; minRole: AppRole };
+
+const RBAC: Rule[] = [
+  { prefix: "/report",          minRole: "finance" },              // finance+ (finance, manager, superadmin)
   { prefix: "/repayment",       minRole: "finance" },
-  { prefix: "/master/position", minRole: "manager" },
-  // tambah aturan lain di sini
+  { prefix: "/master/position", allow: ["manager", "superadmin"] } // manager OR superadmin
+  // tambah aturan lain…
 ];
 
-const RANK = { admin: 1, finance: 2, manager: 3, superadmin: 4 } as const;
+const RANK: Record<AppRole, number> = { admin:1, finance:2, manager:3, superadmin:4 };
 
 function isPublic(pathname: string) {
   return PUBLIC.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+function canAccess(role: AppRole, rule: Rule) {
+  if ("allow" in rule) return rule.allow.includes(role);
+  return RANK[role] >= RANK[rule.minRole];
 }
 
 export default async function proxy(req: NextRequest) {
@@ -28,13 +37,12 @@ export default async function proxy(req: NextRequest) {
 
   try {
     const { payload } = await jwtVerify(token, SECRET, { algorithms: ["HS256"] });
-    const role = String(payload.role || "admin") as keyof typeof RANK;
+    const role = String(payload.role || "admin") as AppRole;
 
-    const guard = RBAC.find((g) => pathname.startsWith(g.prefix));
-    if (guard && RANK[role] < RANK[guard.minRole]) {
+    const rule = RBAC.find((g) => pathname.startsWith(g.prefix));
+    if (rule && !canAccess(role, rule)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
-
     return NextResponse.next();
   } catch {
     return NextResponse.redirect(new URL("/login", req.url));
