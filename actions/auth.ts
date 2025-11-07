@@ -6,7 +6,8 @@ import { normRole, signSession, clearSession } from "@/lib/auth";
 
 export async function login(input: unknown): Promise<{ redirect: string }> {
   const body = input as { username?: string; password?: string };
-  if (!body?.username || !body?.password) throw new Error("Username dan password wajib diisi.");
+  if (!body?.username || !body?.password)
+    throw new Error("Username dan password wajib diisi.");
 
   const account = await prisma.account.findFirst({
     where: { username: body.username },
@@ -20,7 +21,10 @@ export async function login(input: unknown): Promise<{ redirect: string }> {
   if (!valid) throw new Error("Username atau password salah.");
 
   const role = normRole(account.employee?.position?.name);
-  await prisma.account.update({ where: { id: account.id }, data: { lastLoginAt: new Date() } });
+  await prisma.account.update({
+    where: { id: account.id },
+    data: { lastLoginAt: new Date() },
+  });
 
   await signSession({
     sub: account.id,
