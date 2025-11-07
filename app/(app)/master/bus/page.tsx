@@ -125,11 +125,11 @@ export default function BusPage() {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen text-gray-800">
-      <h1 className="text-2xl font-bold mb-8">Master Data Bus</h1>
+      <h1 className="text-2xl font-bold mb-8">Master Data Armada</h1>
 
       <div className="grid lg:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 gap-4 mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div>
-          <label className="text-sm text-gray-600">Nama Bus</label>
+          <label className="text-sm text-gray-600">Nama Armada</label>
           <input
             type="text"
             value={form.name}
@@ -151,7 +151,7 @@ export default function BusPage() {
         </div>
 
         <div>
-          <label className="text-sm text-gray-600">Tipe Bus</label>
+          <label className="text-sm text-gray-600">Tipe Armada</label>
           <Select
             styles={selectStyle}
             options={busTypeOptions}
@@ -188,7 +188,7 @@ export default function BusPage() {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-blue-50 text-gray-700 uppercase text-xs font-semibold">
             <tr>
-              <th className="p-3 text-left">Nama Bus</th>
+              <th className="p-3 text-left">Nama Armada</th>
               <th className="p-3 text-left">No. Polisi</th>
               <th className="p-3 text-left">Tipe</th>
               <th className="p-3 text-left">Kapasitas</th>
