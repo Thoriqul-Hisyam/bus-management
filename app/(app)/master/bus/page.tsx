@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Select from "react-select";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { listBus, createBus, updateBus, deleteBus } from "@/actions/bus";
 const busTypeOptions = [
   { value: "EKONOMI", label: "Ekonomi" },
   { value: "BISNIS", label: "Bisnis" },
