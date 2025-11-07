@@ -75,6 +75,13 @@ export default function Sidebar() {
             <FaCalendarAlt /> Input Jadwal
           </Link>
           <Link
+            href="/trip_sheets"
+            className={linkClass(pathname, "/trip_sheets")}
+            onClick={() => setOpen(false)}
+          >
+            <FaFileInvoiceDollar /> Surat Jalan
+          </Link>
+          <Link
             href="/repayment"
             className={linkClass(pathname, "/repayment")}
             onClick={() => setOpen(false)}

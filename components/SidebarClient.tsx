@@ -27,7 +27,8 @@ export default function Sidebar({ role }: { role: Role }) {
       pathname === path ? "bg-blue-600 text-white" : "text-gray-700"
     }`;
 
-  const canSeeFinance = role === "finance" || role === "manager" || role === "superadmin";
+  const canSeeFinance =
+    role === "finance" || role === "manager" || role === "superadmin";
   const canSeePositions = role === "manager" || role === "superadmin";
 
   return (
@@ -58,20 +59,44 @@ export default function Sidebar({ role }: { role: Role }) {
         </h1>
 
         <nav className="flex flex-col gap-2">
-          <Link href="/" className={linkClass("/")} onClick={() => setOpen(false)}>
+          <Link
+            href="/"
+            className={linkClass("/")}
+            onClick={() => setOpen(false)}
+          >
             <FaHome /> Dashboard
           </Link>
 
-          <Link href="/schedule/input" className={linkClass("/schedule/input")} onClick={() => setOpen(false)}>
+          <Link
+            href="/schedule/input"
+            className={linkClass("/schedule/input")}
+            onClick={() => setOpen(false)}
+          >
             <FaCalendarAlt /> Input Jadwal
+          </Link>
+
+          <Link
+            href="/trip_sheet"
+            className={linkClass("/trip_sheet")}
+            onClick={() => setOpen(false)}
+          >
+            <FaFileInvoiceDollar /> Surat Jalan
           </Link>
 
           {canSeeFinance && (
             <>
-              <Link href="/repayment" className={linkClass("/repayment")} onClick={() => setOpen(false)}>
+              <Link
+                href="/repayment"
+                className={linkClass("/repayment")}
+                onClick={() => setOpen(false)}
+              >
                 <FaFileInvoiceDollar /> Tagihan Pembayaran
               </Link>
-              <Link href="/report/revenue" className={linkClass("/report/revenue")} onClick={() => setOpen(false)}>
+              <Link
+                href="/report/revenue"
+                className={linkClass("/report/revenue")}
+                onClick={() => setOpen(false)}
+              >
                 <FaMoneyBillWave /> Report Revenue
               </Link>
             </>
@@ -91,7 +116,11 @@ export default function Sidebar({ role }: { role: Role }) {
 
             {openMaster && (
               <div className="ml-6 mt-2 flex flex-col gap-1">
-                <Link href="/master/bus" className={linkClass("/master/bus")} onClick={() => setOpen(false)}>
+                <Link
+                  href="/master/bus"
+                  className={linkClass("/master/bus")}
+                  onClick={() => setOpen(false)}
+                >
                   <FaBus /> Armada
                 </Link>
                 <Link href="/master/bus-type" className={linkClass("/master/bus-type")} onClick={() => setOpen(false)}>
@@ -101,11 +130,19 @@ export default function Sidebar({ role }: { role: Role }) {
                   <FaUserTie /> Karyawan
                 </Link>
                 {canSeePositions && (
-                  <Link href="/master/position" className={linkClass("/master/position")} onClick={() => setOpen(false)}>
+                  <Link
+                    href="/master/position"
+                    className={linkClass("/master/position")}
+                    onClick={() => setOpen(false)}
+                  >
                     <FaUserTie /> Jabatan
                   </Link>
                 )}
-                <Link href="/master/customers" className={linkClass("/master/customers")} onClick={() => setOpen(false)}>
+                <Link
+                  href="/master/customers"
+                  className={linkClass("/master/customers")}
+                  onClick={() => setOpen(false)}
+                >
                   <FaUserFriends /> Customer
                 </Link>
               </div>
