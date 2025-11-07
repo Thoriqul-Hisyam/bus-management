@@ -4,7 +4,7 @@ import { jwtVerify } from "jose";
 type AppRole = "admin" | "finance" | "manager" | "superadmin";
 
 const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me");
-const PUBLIC = ["/login", "/_next", "/favicon", "/public"];
+const PUBLIC = ["/login", "/_next", "/favicon", "/public", "/img"];
 
 type Rule =
   | { prefix: string; allow: AppRole[] }

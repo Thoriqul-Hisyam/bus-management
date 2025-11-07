@@ -44,9 +44,10 @@ export default function LoginPage() {
         <CardHeader className="space-y-4 items-center">
           <Image
             src="/img/logo.png"
+            className="justify-self-center"
             alt="logo"
             width={120}
-            height={40}
+            height={120}
             priority
           />
           <CardTitle className="text-center">Masuk ke Navara</CardTitle>
