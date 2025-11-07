@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "key:generate": "node scripts/gen-key.mjs",
-    "seed": "ts-node --transpile-only prisma/seed.ts",
+    "seed": "prisma db seed",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -38,7 +38,7 @@
     "postcss": "^8.5.6",
     "prisma": "^6.18.0",
     "tailwindcss": "^4.1.16",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
