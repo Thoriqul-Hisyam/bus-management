@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <body suppressHydrationWarning className="flex bg-gray-100 min-h-screen">
         <SessionProvider value={sessionForClient}>
           <Sidebar />
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col md:ml-64">
             <Navbar />
             <main className="p-6">{children}</main>
           </div>

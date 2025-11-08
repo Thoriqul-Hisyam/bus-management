@@ -6,7 +6,25 @@ import { format, parse, startOfWeek, getDay } from "date-fns";
 import { id } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import Swal from "sweetalert2";
-import { listSchedules } from "@/actions/schedule"; // server action
+import { listSchedules } from "@/actions/schedule";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const locales = { id };
 const localizer = dateFnsLocalizer({
@@ -30,13 +48,12 @@ export default function ScheduleCheckPage() {
 
   const getEventColor = (s) => {
     if (s.legrest || s.bantalLeher) {
-      return { bg: "#3b82f6", text: "#ffffff" };
+      return { bg: "#3b82f6", text: "#ffffff" }; // warna utama Navara
     } else {
-      return { bg: "#6b7280", text: "#ffffff" };
+      return { bg: "#6b7280", text: "#ffffff" }; // warna coklat tua
     }
   };
 
-  // ambil data jadwal dari DB
   async function refreshSchedules() {
     try {
       setLoading(true);
@@ -57,10 +74,8 @@ export default function ScheduleCheckPage() {
     refreshSchedules();
   }, []);
 
-  // setiap kali scheduleList berubah → mapping ke events calendar
   useEffect(() => {
     if (!scheduleList || scheduleList.length === 0) return;
-
     const mapped = scheduleList.map((s) => {
       const colors = getEventColor(s);
       return {
@@ -72,11 +87,9 @@ export default function ScheduleCheckPage() {
         textColor: colors.text,
       };
     });
-
     setEvents(mapped);
   }, [scheduleList]);
 
-  // realtime jam
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -96,7 +109,6 @@ export default function ScheduleCheckPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // ambil tanggal merah API
   const fetchLibur = useCallback(async (date) => {
     try {
       const year = date.getFullYear();
@@ -126,9 +138,9 @@ export default function ScheduleCheckPage() {
     const dateStr = format(date, "yyyy-MM-dd");
     const isLibur = tanggalMerah.includes(dateStr);
     if (isLibur || day === 0)
-      return { style: { backgroundColor: "#ffe5e5", color: "#c70000" } };
+      return { style: { backgroundColor: "#FEE2E2", color: "#B91C1C" } };
     else if (day === 5)
-      return { style: { backgroundColor: "#e6f9e6", color: "#0a7d00" } };
+      return { style: { backgroundColor: "#DCFCE7", color: "#166534" } };
     return {};
   };
 
@@ -136,7 +148,7 @@ export default function ScheduleCheckPage() {
     style: {
       backgroundColor: event.backgroundColor,
       color: event.textColor,
-      borderRadius: "5px",
+      borderRadius: "6px",
       border: "none",
       display: "block",
       padding: "2px 5px",
@@ -151,11 +163,11 @@ export default function ScheduleCheckPage() {
     let bg = "",
       color = "";
     if (isLibur || day === 0) {
-      bg = "#ffe5e5";
-      color = "#c70000";
+      bg = "#FEE2E2";
+      color = "#B91C1C";
     } else if (day === 5) {
-      bg = "#e6f9e6";
-      color = "#0a7d00";
+      bg = "#DCFCE7";
+      color = "#166534";
     }
     return (
       <div
@@ -174,190 +186,188 @@ export default function ScheduleCheckPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <h1 className="text-2xl font-bold mb-4">Selamat Datang di Dashboard Navara</h1>
-      <p className="text-gray-700 mb-6">
-        Hari ini: <span className="font-semibold">{dateTime}</span>
-      </p>
+    <div className="min-h-screen bg-muted/40 p-6">
+      <Card className="max-w-6xl mx-auto border-amber-900/20 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#8B5E3C] to-[#A97449] bg-clip-text text-transparent">
+            Jadwal Armada Navara
+          </CardTitle>
+          <CardDescription>
+            Hari ini: <span className="font-medium">{dateTime}</span>
+          </CardDescription>
+        </CardHeader>
 
-      <div className="mx-auto bg-white rounded-2xl shadow-md p-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
-          Cek Jadwal Armada
-        </h2>
+        <CardContent className="space-y-4">
+          {/* tombol view */}
+          <div className="flex gap-2">
+            {Object.entries({
+              Bulan: Views.MONTH,
+              Minggu: Views.WEEK,
+              Hari: Views.DAY,
+              Agenda: Views.AGENDA,
+            }).map(([label, v]) => (
+              <Button
+                key={v}
+                size="sm"
+                className={`transition-colors ${
+                  view === v
+                    ? "bg-gradient-to-r from-[#B57A36] to-[#5C3B18] text-white shadow"
+                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+                onClick={() => setView(v)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
 
-        {/* tombol view */}
-        <div className="flex gap-2 mb-4">
-          {Object.entries({
-            Bulan: Views.MONTH,
-            Minggu: Views.WEEK,
-            Hari: Views.DAY,
-            Agenda: Views.AGENDA,
-          }).map(([label, v]) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-3 py-1 rounded-md ${
-                view === v ? "bg-blue-600 text-white" : "bg-gray-200"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* legenda */}
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-sm font-semibold text-gray-700 mb-2">
-            Keterangan Warna:
-          </p>
-          <div className="flex flex-wrap gap-4">
+          {/* legenda */}
+          <div className="flex gap-4 items-center flex-wrap border rounded-md p-3 bg-muted/30">
+            <span className="text-sm font-semibold text-muted-foreground">
+              Keterangan Warna:
+            </span>
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: "#3b82f6" }}></div>
-              <span className="text-sm text-gray-600">Dengan Opsi (Legrest)</span>
+              <div
+                className="w-5 h-5 rounded"
+                style={{ backgroundColor: "#3b82f6" }}
+              ></div>
+              <span className="text-sm">Dengan Opsi (Legrest)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: "#6b7280" }}></div>
-              <span className="text-sm text-gray-600">Tanpa Opsi Tambahan</span>
+              <div
+                className="w-5 h-5 rounded"
+                style={{ backgroundColor: "#6b7280" }}
+              ></div>
+              <span className="text-sm">Tanpa Opsi Tambahan</span>
             </div>
           </div>
-        </div>
 
-        {/* kalender */}
-        <div className="overflow-x-auto">
-          <Calendar
-            localizer={localizer}
-            events={events}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: 600, minWidth: "700px" }}
-            view={view}
-            onView={setView}
-            onNavigate={setCurrentDate}
-            dayPropGetter={dayPropGetter}
-            eventPropGetter={eventStyleGetter}
-            components={{ dateCellWrapper: CustomDateCell }}
-            onSelectEvent={(event) => setSelectedEvent(event)}
-            messages={{
-              next: "Berikutnya",
-              previous: "Sebelumnya",
-              today: "Hari Ini",
-              month: "Bulan",
-              week: "Minggu",
-              day: "Hari",
-              agenda: "Agenda",
-            }}
-          />
-        </div>
+          {/* kalender */}
+          <div className="rounded-lg border bg-background overflow-hidden">
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: 600, minWidth: "700px" }}
+              view={view}
+              onView={setView}
+              onNavigate={setCurrentDate}
+              dayPropGetter={dayPropGetter}
+              eventPropGetter={eventStyleGetter}
+              components={{ dateCellWrapper: CustomDateCell }}
+              onSelectEvent={(event) => setSelectedEvent(event)}
+              messages={{
+                next: "Berikutnya",
+                previous: "Sebelumnya",
+                today: "Hari Ini",
+                month: "Bulan",
+                week: "Minggu",
+                day: "Hari",
+                agenda: "Agenda",
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* modal detail (UI tetap sama) */}
-        {selectedEvent && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedEvent(null)}
-          >
-            <div
-              className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4 pb-4 border-b">
-                <h3 className="text-xl font-bold text-gray-800">Detail Pesanan</h3>
-                <button
-                  onClick={() => setSelectedEvent(null)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-                >
-                  ×
-                </button>
-              </div>
+      {/* modal detail */}
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <DialogContent className="max-w-lg">
+          {selectedEvent && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Detail Pesanan</DialogTitle>
+                <DialogDescription>
+                  Informasi lengkap jadwal armada
+                </DialogDescription>
+              </DialogHeader>
 
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-sm text-gray-500">Customer</p>
-                    <p className="font-semibold text-gray-800">{selectedEvent.customer}</p>
+                    <p className="text-muted-foreground">Customer</p>
+                    <p className="font-semibold">{selectedEvent.customer}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Sales</p>
-                    <p className="font-semibold text-gray-800">{selectedEvent.sales}</p>
+                    <p className="text-muted-foreground">Sales</p>
+                    <p className="font-semibold">{selectedEvent.sales}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Armada</p>
-                    <p className="font-semibold text-gray-800">{selectedEvent.bus}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Pickup</p>
-                    <p className="font-semibold text-gray-800">{selectedEvent.pickupAddress}</p>
+                    <p className="text-muted-foreground">Armada</p>
+                    <p className="font-semibold">{selectedEvent.bus}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Tujuan</p>
-                    <p className="font-semibold text-gray-800">{selectedEvent.destination}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Legrest</p>
-                    <p className="font-semibold text-gray-800">
-                      {selectedEvent.legrest ? "Yes" : "No"}
+                    <p className="text-muted-foreground">Pickup</p>
+                    <p className="font-semibold">
+                      {selectedEvent.pickupAddress}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">DP</p>
-                    <p className="font-semibold text-green-600">
-                      Rp {selectedEvent.amount?.toLocaleString("id-ID")}
+                    <p className="text-muted-foreground">Tujuan</p>
+                    <p className="font-semibold">{selectedEvent.destination}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Legrest</p>
+                    <Badge
+                      className={
+                        selectedEvent.legrest
+                          ? "bg-gradient-to-r from-[#8B5E3C] to-[#A97449] text-white"
+                          : "border-gray-300 text-gray-600"
+                      }
+                    >
+                      {selectedEvent.legrest ? "Ya" : "Tidak"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t">
+                  <div>
+                    <p className="text-muted-foreground">Mulai</p>
+                    <p>
+                      {format(selectedEvent.start, "dd MMM yyyy HH:mm", {
+                        locale: id,
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Selesai</p>
+                    <p>
+                      {format(selectedEvent.end, "dd MMM yyyy HH:mm", {
+                        locale: id,
+                      })}
                     </p>
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm text-gray-500">Total Harga</p>
-                  <p className="text-xl font-bold text-blue-600">
+                <div className="bg-amber-50 dark:bg-amber-950/20 rounded-md p-3 border border-amber-200/40">
+                  <p className="text-sm text-gray-700 dark:text-gray-200">
+                    <span className="font-semibold">DP:</span>{" "}
+                    Rp {selectedEvent.amount?.toLocaleString("id-ID")}
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200">
+                    <span className="font-semibold">Total Harga:</span>{" "}
                     Rp {selectedEvent.priceTotal?.toLocaleString("id-ID")}
                   </p>
-                </div>
-
-                <div className="pt-3 border-t">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Mulai</p>
-                      <p className="font-medium text-gray-800">
-                        {format(selectedEvent.start, "dd MMM yyyy HH:mm", { locale: id })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Selesai</p>
-                      <p className="font-medium text-gray-800">
-                        {format(selectedEvent.end, "dd MMM yyyy HH:mm", { locale: id })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-semibold">Sisa Pembayaran:</span>{" "}
-                    <span className="text-red-600 font-bold">
-                      Rp{" "}
-                      {(selectedEvent.priceTotal - selectedEvent.amount)?.toLocaleString("id-ID")}
-                    </span>
+                  <p className="text-sm font-bold text-red-600">
+                    Sisa Pembayaran: Rp{" "}
+                    {(selectedEvent.priceTotal - selectedEvent.amount)?.toLocaleString("id-ID")}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 flex gap-3">
-                <button
+              <DialogFooter>
+                <Button
+                  variant="secondary"
                   onClick={() => setSelectedEvent(null)}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition"
                 >
                   Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

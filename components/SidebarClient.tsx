@@ -8,152 +8,164 @@ import {
   FaCalendarAlt,
   FaMoneyBillWave,
   FaHome,
-  FaBars,
-  FaTimes,
   FaUsers,
   FaUserTie,
   FaUserFriends,
   FaFileInvoiceDollar,
 } from "react-icons/fa";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
+import { Menu, ChevronDown, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
 type Role = "superadmin" | "manager" | "finance" | "admin";
+
 export default function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
   const [openMaster, setOpenMaster] = useState(false);
 
   const linkClass = (path: string) =>
-    `flex items-center gap-3 p-3 rounded-lg hover:bg-blue-600 hover:text-white transition ${
-      pathname === path ? "bg-blue-600 text-white" : "text-gray-700"
-    }`;
+    cn(
+      "flex items-center gap-3 p-3 rounded-lg transition",
+      pathname === path
+        ? "bg-gradient-to-r from-[#B57A36] to-[#5C3B18] text-white shadow"
+        : "text-gray-700 hover:bg-gradient-to-r hover:from-[#B57A36]/20 hover:to-[#5C3B18]/20 hover:text-[#5C3B18]"
+    );
 
   const canSeeFinance =
     role === "finance" || role === "manager" || role === "superadmin";
   const canSeePositions = role === "manager" || role === "superadmin";
 
-  return (
-    <>
-      {/* Toggle (mobile) */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-[60] md:hidden bg-blue-600 text-white p-2 rounded-lg shadow-lg"
-        aria-label="Toggle sidebar"
-      >
-        {open ? <FaTimes size={20} /> : <FaBars size={20} />}
-      </button>
+  const navLinks = (
+    <nav className="flex flex-col gap-2">
+      <Link href="/" className={linkClass("/")}>
+        <FaHome /> Dashboard
+      </Link>
 
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setOpen(false)}
-        />
+      <Link href="/schedule/input" className={linkClass("/schedule/input")}>
+        <FaCalendarAlt /> Input Jadwal
+      </Link>
+
+      <Link href="/trip_sheet" className={linkClass("/trip_sheet")}>
+        <FaFileInvoiceDollar /> Surat Jalan
+      </Link>
+
+      {canSeeFinance && (
+        <>
+          <Link href="/repayment" className={linkClass("/repayment")}>
+            <FaFileInvoiceDollar /> Tagihan Pembayaran
+          </Link>
+          <Link href="/report/revenue" className={linkClass("/report/revenue")}>
+            <FaMoneyBillWave /> Report Revenue
+          </Link>
+        </>
       )}
 
-      <aside
-        className={`fixed md:static top-0 left-0 h-full md:h-auto w-64 bg-white shadow-lg p-4 flex flex-col z-50 transform transition-transform duration-300 ease-in-out ${
-          open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
-      >
-        <h1 className="text-xl font-bold mb-6 text-blue-800 text-center md:text-left">
-          Manajemen Armada
-        </h1>
-
-        <nav className="flex flex-col gap-2">
-          <Link
-            href="/"
-            className={linkClass("/")}
-            onClick={() => setOpen(false)}
+      <Collapsible open={openMaster} onOpenChange={setOpenMaster}>
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="flex items-center justify-between w-full p-3 text-gray-700 hover:bg-gradient-to-r hover:from-[#B57A36]/10 hover:to-[#5C3B18]/10"
           >
-            <FaHome /> Dashboard
-          </Link>
-
-          <Link
-            href="/schedule/input"
-            className={linkClass("/schedule/input")}
-            onClick={() => setOpen(false)}
-          >
-            <FaCalendarAlt /> Input Jadwal
-          </Link>
-
-          <Link
-            href="/trip_sheet"
-            className={linkClass("/trip_sheet")}
-            onClick={() => setOpen(false)}
-          >
-            <FaFileInvoiceDollar /> Surat Jalan
-          </Link>
-
-          {canSeeFinance && (
-            <>
-              <Link
-                href="/repayment"
-                className={linkClass("/repayment")}
-                onClick={() => setOpen(false)}
-              >
-                <FaFileInvoiceDollar /> Tagihan Pembayaran
-              </Link>
-              <Link
-                href="/report/revenue"
-                className={linkClass("/report/revenue")}
-                onClick={() => setOpen(false)}
-              >
-                <FaMoneyBillWave /> Report Revenue
-              </Link>
-            </>
-          )}
-
-          <div>
-            <button
-              onClick={() => setOpenMaster(!openMaster)}
-              className="flex items-center justify-between w-full p-3 rounded-lg hover:bg-blue-50 text-gray-700"
-              aria-expanded={openMaster}
-            >
-              <span className="flex items-center gap-3">
-                <FaUsers /> Master Data
-              </span>
-              <span className="text-gray-500">{openMaster ? "▾" : "▸"}</span>
-            </button>
-
-            {openMaster && (
-              <div className="ml-6 mt-2 flex flex-col gap-1">
-                <Link
-                  href="/master/bus"
-                  className={linkClass("/master/bus")}
-                  onClick={() => setOpen(false)}
-                >
-                  <FaBus /> Armada
-                </Link>
-                <Link href="/master/bus-type" className={linkClass("/master/bus-type")} onClick={() => setOpen(false)}>
-                  <FaBus /> Tipe Armada
-                </Link>
-                <Link href="/master/employees" className={linkClass("/master/employees")} onClick={() => setOpen(false)}>
-                  <FaUserTie /> Karyawan
-                </Link>
-                {canSeePositions && (
-                  <Link
-                    href="/master/position"
-                    className={linkClass("/master/position")}
-                    onClick={() => setOpen(false)}
-                  >
-                    <FaUserTie /> Jabatan
-                  </Link>
-                )}
-                <Link
-                  href="/master/customers"
-                  className={linkClass("/master/customers")}
-                  onClick={() => setOpen(false)}
-                >
-                  <FaUserFriends /> Customer
-                </Link>
-              </div>
+            <span className="flex items-center gap-3">
+              <FaUsers /> Master Data
+            </span>
+            {openMaster ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
             )}
-          </div>
-        </nav>
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="ml-6 mt-2 flex flex-col gap-1">
+          <Link href="/master/bus" className={linkClass("/master/bus")}>
+            <FaBus /> Armada
+          </Link>
+          <Link
+            href="/master/bus-type"
+            className={linkClass("/master/bus-type")}
+          >
+            <FaBus /> Tipe Armada
+          </Link>
+          <Link
+            href="/master/employees"
+            className={linkClass("/master/employees")}
+          >
+            <FaUserTie /> Karyawan
+          </Link>
+          {canSeePositions && (
+            <Link
+              href="/master/position"
+              className={linkClass("/master/position")}
+            >
+              <FaUserTie /> Jabatan
+            </Link>
+          )}
+          <Link
+            href="/master/customers"
+            className={linkClass("/master/customers")}
+          >
+            <FaUserFriends /> Customer
+          </Link>
+        </CollapsibleContent>
+      </Collapsible>
+    </nav>
+  );
 
+  return (
+    <div>
+      {/* Mobile Sidebar */}
+      <div className="md:hidden">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              size="icon"
+              variant="default"
+              className="fixed top-4 left-4 z-50 bg-gradient-to-r from-[#B57A36] to-[#5C3B18] text-white shadow-lg"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-4 w-64 flex flex-col">
+            <div className="flex justify-center mb-6">
+              <Image
+                src="/img/logo.png"
+                alt="logo"
+                width={120}
+                height={120}
+                priority
+              />
+            </div>
+            {navLinks}
+            <div className="mt-auto text-sm text-gray-500 border-t pt-4 text-center">
+              © 2025 Lefateach
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 bg-white shadow-lg p-4 h-screen fixed left-0 top-0">
+        <div className="flex justify-center mb-6">
+          <Image
+            src="/img/logo.png"
+            alt="logo"
+            width={120}
+            height={120}
+            priority
+          />
+        </div>
+        {navLinks}
         <div className="mt-auto text-sm text-gray-500 border-t pt-4 text-center md:text-left">
           © 2025 Lefateach
         </div>
       </aside>
-    </>
+    </div>
   );
 }
