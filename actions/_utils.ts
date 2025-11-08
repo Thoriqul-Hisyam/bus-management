@@ -7,7 +7,7 @@ export async function revalidateMasterBus() {
 }
 
 export async function revalidateMasterEmployees() {
-  revalidatePath("/master/employes");
+  revalidatePath("/master/employees");
 }
 
 export async function revalidateMasterSchedules() {

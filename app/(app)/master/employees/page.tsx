@@ -1,261 +1,433 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import Select, { SingleValue } from "react-select";
-import Swal from "sweetalert2";
-import { listEmployees, createEmployee, updateEmployee, deleteEmployee } from "@/actions/employee";
-import { listPositions } from "@/actions/position";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { listEmployees, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeAccountStatus, changeEmployeePassword } from "@/actions/employee";
+import { listAllPositions } from "@/actions/position";
+import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import Pagination from "@/components/shared/pagination";
+import { ActionDropdown } from "@/components/shared/action-dropdown";
+import { CrudModal } from "@/components/shared/crud-modal";
+import { DeleteConfirm } from "@/components/shared/delete-confirm";
+import { z } from "zod";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type Option = { value: number; label: string };
+type SortKey =
+  | "name_asc"
+  | "name_desc"
+  | "position_asc"
+  | "position_desc";
 
-type Position = {
-  id: number;
-  name: string;
-};
+type StatusFilter = "all" | "active" | "inactive";
 
+type Position = { id: number; name: string };
 type EmployeeRow = {
   id: number;
   fullName: string;
   phone?: string | null;
   positionId: number;
   position?: Position | null;
-  username?: string | null; // di-actions sudah dibentuk dari account?.username
+  username?: string | null;
+  isActive?: boolean | null;
 };
 
-type FormState = {
-  id: number | null;
-  fullName: string;
-  position: Option | null;
-  phone: string;
-  username: string;
-  password: string;
-};
+const EmployeeFormSchema = z.object({
+  fullName: z.string().min(1, "Nama wajib diisi"),
+  positionId: z.coerce.number().int().positive({ message: "Jabatan wajib dipilih" }),
+  phone: z.string().optional(),
+  username: z.string().min(3, "Min 3 karakter").optional(),
+  password: z.string().min(6, "Min 6 karakter").optional(),
+}).refine(
+  (data) => (!!data.username && !!data.password) || (!data.username && !data.password),
+  { message: "Isi username dan password bersamaan untuk membuat/mengubah akun.", path: ["username"] }
+);
+type EmployeeForm = z.infer<typeof EmployeeFormSchema>;
 
-export default function EmployeePage() {
-  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
-  const [positions, setPositions] = useState<Option[]>([]);
+const PasswordSchema = z.object({ password: z.string().min(6, "Min 6 karakter") });
+type PasswordForm = z.infer<typeof PasswordSchema>;
+
+export default function EmployeesPage() {
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("name_asc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [status, setStatus] = useState<StatusFilter>("all");
+
+  const [rows, setRows] = useState<EmployeeRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [positions, setPositions] = useState<Position[]>([]);
+
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [form, setForm] = useState<FormState>({
-    id: null,
-    fullName: "",
-    position: null,
-    phone: "",
-    username: "",
-    password: "",
-  });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editRow, setEditRow] = useState<EmployeeRow | null>(null);
+  const [deleting, setDeleting] = useState<EmployeeRow | null>(null);
+  const [pwdRow, setPwdRow] = useState<EmployeeRow | null>(null);
 
-  async function refresh() {
-    const [pos, emp] = await Promise.all([listPositions(), listEmployees()]);
-    setPositions(pos.map((p: Position) => ({ value: p.id, label: p.name })));
-    if (emp.ok) setEmployees(emp.data as EmployeeRow[]);
-    else Swal.fire("Gagal", emp.error, "error");
+  async function fetchData(opts?: {
+    q?: string;
+    sort?: SortKey;
+    page?: number;
+    perPage?: number;
+    status?: StatusFilter;
+  }) {
+    const _q = opts?.q ?? q;
+    const _sort = opts?.sort ?? sort;
+    const _page = opts?.page ?? page;
+    const _perPage = opts?.perPage ?? perPage;
+    const _status = opts?.status ?? status;
+
+    setIsLoading(true);
+    try {
+      const res = await listEmployees({ q: _q, sort: _sort, page: _page, perPage: _perPage, status: _status });
+      if (res.ok) {
+        setRows(res.data.rows);
+        setTotal(res.data.total);
+      } else {
+        console.error(res.error);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   useEffect(() => {
-    // initial load
-    void refresh();
+    startTransition(async () => {
+      const pos = await listAllPositions();
+      setPositions(pos);
+      await fetchData({ page: 1 });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const resetForm = () =>
-    setForm({ id: null, fullName: "", position: null, phone: "", username: "", password: "" });
+  useEffect(() => {
+    startTransition(() => void fetchData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, page, perPage, status]);
 
-  const addOrUpdateEmployee = () => {
-    if (!form.fullName || !form.position) {
-      Swal.fire("Peringatan", "Nama & Jabatan wajib diisi!", "warning");
-      return;
-    }
-    // username/password opsional namun harus berpasangan
-    if ((form.username && !form.password) || (!form.username && form.password)) {
-      Swal.fire("Peringatan", "Isi username dan password bersamaan untuk membuat/mengubah akun.", "warning");
-      return;
-    }
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      startTransition(() => void fetchData({ page: 1 }));
+    }, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-    startTransition(async () => {
-      const payload = {
-        id: form.id ?? undefined,
-        fullName: form.fullName,
-        phone: form.phone || undefined,
-        positionId: form.position?.value as number,
-        username: form.username || undefined,
-        password: form.password || undefined,
-      };
+  const startIndex = (page - 1) * perPage;
+  const columns: DataTableColumn<EmployeeRow>[] = useMemo(
+    () => [
+      { key: "no", label: "No.", className: "w-16 text-center", render: (_r, i) => i + 1 },
+      { key: "fullName", label: "Nama", sortable: true, render: (r) => <span className="font-medium">{r.fullName}</span> },
+      { key: "position", label: "Jabatan", sortable: true, render: (r) => r.position?.name ?? "-" },
+      { key: "phone", label: "Telepon", render: (r) => r.phone ?? "-" },
+      { key: "username", label: "Username", render: (r) => r.username ?? "—" },
+      {
+        key: "status", label: "Status Akun", className: "w-36",
+        render: (r) =>
+          r.username ? (
+            <span className={r.isActive ? "inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700"
+                                        : "inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700"}>
+              {r.isActive ? "Aktif" : "Nonaktif"}
+            </span>
+          ) : <span className="text-xs text-muted-foreground">—</span>
+      },
+      {
+        key: "actions", label: "Aksi", className: "w-24 text-right",
+        render: (r) => {
+          const items = [
+            { key: "edit", label: "Edit" },
+            ...(r.username ? [
+              { key: "change-password", label: "Ubah Password" },
+              { key: "toggle-status", label: r.isActive ? "Nonaktifkan Akun" : "Aktifkan Akun" },
+            ] : []),
+            { key: "delete", label: "Hapus", destructive: true },
+          ] as const;
 
-      const res = form.id ? await updateEmployee(payload) : await createEmployee(payload);
+          return (
+            <ActionDropdown
+              items={items as any}
+              onClickItem={(key) => {
+                if (key === "edit") setEditRow(r);
+                else if (key === "delete") setDeleting(r);
+                else if (key === "change-password") setPwdRow(r);
+                else if (key === "toggle-status") {
+                  startTransition(async () => {
+                    const res = await toggleEmployeeAccountStatus(r.id);
+                    if (res.ok) await fetchData();
+                    else console.error(res.error);
+                  });
+                }
+              }}
+            />
+          );
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [page, perPage]
+  );
 
-      if (res.ok) {
-        Swal.fire("Berhasil", form.id ? "Data karyawan diperbarui" : "Karyawan ditambahkan", "success");
-        resetForm();
-        await refresh();
-      } else {
-        Swal.fire("Gagal", res.error, "error");
-      }
-    });
-  };
+  const sortKey =
+    sort.startsWith("name") ? "fullName" :
+    sort.startsWith("position") ? "position" :
+    undefined;
+  const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
-  const editEmployee = (emp: EmployeeRow) => {
-    setForm({
-      id: emp.id,
-      fullName: emp.fullName,
-      phone: emp.phone ?? "",
-      username: emp.username ?? "",
-      password: "",
-      position: positions.find((p) => p.value === emp.positionId) || null,
-    });
-  };
-
-  const onDelete = async (id: number) => {
-    const confirm = await Swal.fire({
-      title: "Yakin ingin menghapus?",
-      text: "Data karyawan akan dihapus permanen.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonText: "Batal",
-      confirmButtonText: "Ya, hapus!",
-    });
-    if (!confirm.isConfirmed) return;
-
-    startTransition(async () => {
-      const res = await deleteEmployee(id);
-      if (res.ok) {
-        Swal.fire("Dihapus!", "Data karyawan telah dihapus.", "success");
-        await refresh();
-      } else {
-        Swal.fire("Gagal", res.error, "error");
-      }
-    });
-  };
-
-  const onChangePosition = (selected: SingleValue<Option>) =>
-    setForm((prev) => ({ ...prev, position: selected ?? null }));
+  const EmployeeFormSchema = z.object({
+    fullName: z.string().min(1, "Nama wajib diisi"),
+    positionId: z.coerce.number().int().positive({ message: "Jabatan wajib dipilih" }),
+    phone: z.string().optional(),
+    username: z.string().min(3, "Min 3 karakter").optional(),
+    password: z.string().min(6, "Min 6 karakter").optional(),
+  }).refine(
+    (data) => (!!data.username && !!data.password) || (!data.username && !data.password),
+    { message: "Isi username dan password bersamaan untuk membuat/mengubah akun.", path: ["username"] }
+  );
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen text-gray-800">
-      <h1 className="text-2xl font-bold mb-8">Master Data Karyawan</h1>
+    <main className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Master Data Karyawan</h1>
 
-      {/* Form */}
-      <div className="grid md:grid-cols-6 sm:grid-cols-2 gap-4 mb-6">
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Nama Lengkap</label>
-          <input
-            type="text"
-            placeholder="Nama lengkap"
-            className="border p-3 rounded-lg"
-            value={form.fullName}
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-          />
+      <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex items-center gap-2">
+          <Input placeholder="Cari nama / username / jabatan..." value={q} onChange={(e) => setQ(e.target.value)} />
+          {q ? <Button variant="ghost" onClick={() => setQ("")}>Reset</Button> : null}
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Jabatan</label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Status Akun</span>
           <Select
-            options={positions}
-            value={form.position}
-            onChange={onChangePosition}
-            placeholder="Pilih jabatan..."
-            isClearable
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Telepon</label>
-          <input
-            type="text"
-            placeholder="Nomor Telepon"
-            className="border p-3 rounded-lg"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Username (opsional)</label>
-          <input
-            type="text"
-            placeholder="Username login"
-            className="border p-3 rounded-lg"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Password (opsional)</label>
-          <input
-            type="password"
-            placeholder="Password login"
-            className="border p-3 rounded-lg"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-        </div>
-
-        <div className="flex items-end gap-2">
-          <button
-            onClick={addOrUpdateEmployee}
-            disabled={isPending}
-            className={`${form.id ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"} text-white px-6 py-3 rounded-lg font-medium w-full disabled:opacity-50`}
+            value={status}
+            onValueChange={(v: StatusFilter) => { setPage(1); setStatus(v); }}
           >
-            {form.id ? "Simpan" : "+ Tambah"}
-          </button>
-          {form.id && (
-            <button
-              onClick={resetForm}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-3 rounded-lg font-medium"
-            >
-              Batal
-            </button>
-          )}
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua</SelectItem>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="inactive">Nonaktif</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center sm:justify-end">
+          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-blue-50 text-gray-700 uppercase text-xs font-semibold">
-            <tr>
-              <th className="p-3 text-left">Nama</th>
-              <th className="p-3 text-left">Jabatan</th>
-              <th className="p-3 text-left">Telepon</th>
-              <th className="p-3 text-left">Username</th>
-              <th className="p-3 text-center w-32">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.length > 0 ? (
-              employees.map((e) => (
-                <tr key={e.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{e.fullName}</td>
-                  <td className="p-3">{e.position?.name}</td>
-                  <td className="p-3">{e.phone}</td>
-                  <td className="p-3">{e.username ?? "-"}</td>
-                  <td className="p-3 text-center space-x-3">
-                    <button
-                      onClick={() => editEmployee(e)}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(e.id)}
-                      className="text-red-600 hover:text-red-700 font-medium"
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="text-center p-6 text-gray-500 italic">
-                  Belum ada data karyawan
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <DataTable<EmployeeRow>
+        rows={rows}
+        columns={columns}
+        isLoading={isLoading || isPending}
+        startIndex={startIndex}
+        sortKey={sortKey}
+        sortDir={sortDir as any}
+        onHeaderClick={(col) => {
+          if (col.key === "fullName") {
+            setPage(1);
+            setSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"));
+          }
+          if (col.key === "position") {
+            setPage(1);
+            setSort((prev) => (prev === "position_asc" ? "position_desc" : "position_asc"));
+          }
+        }}
+      />
+
+      <div className="mt-3">
+        <Pagination
+          page={page}
+          perPage={perPage}
+          total={total}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(pp) => { setPage(1); setPerPage(pp); }}
+        />
       </div>
-    </div>
+
+      <CrudModal<EmployeeForm>
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Tambah Karyawan"
+        description="Isi data karyawan dan (opsional) buat akun login."
+        schema={EmployeeFormSchema}
+        defaultValues={{
+          fullName: "",
+          positionId: positions[0]?.id ?? undefined,
+          phone: "",
+          username: undefined,
+          password: undefined,
+        }}
+        onSubmit={async (values) => {
+          const res = await createEmployee(values);
+          if (res.ok) {
+            setCreateOpen(false);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Lengkap</label>
+              <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
+              {f.formState.errors.fullName && <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Jabatan</label>
+              <Select
+                value={String(f.watch("positionId") ?? "")}
+                onValueChange={(v) => f.setValue("positionId", Number(v))}
+              >
+                <SelectTrigger><SelectValue placeholder="Pilih jabatan" /></SelectTrigger>
+                <SelectContent>
+                  {positions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {f.formState.errors.positionId && <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Telepon</label>
+              <Input {...f.register("phone")} placeholder="Nomor telepon" />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Username (opsional)</label>
+                <Input {...f.register("username")} placeholder="Username" />
+                {f.formState.errors.username && <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Password (opsional)</label>
+                <Input type="password" {...f.register("password")} placeholder="Password" />
+                {f.formState.errors.password && <p className="text-sm text-destructive">{String(f.formState.errors.password.message)}</p>}
+              </div>
+            </div>
+          </>
+        )}
+      />
+
+      <CrudModal<EmployeeForm>
+        open={!!editRow}
+        onOpenChange={(v) => !v && setEditRow(null)}
+        title="Ubah Karyawan"
+        description="Perbarui data karyawan. Untuk ubah password gunakan aksi 'Ubah Password'."
+        schema={EmployeeFormSchema}
+        defaultValues={
+          editRow
+            ? {
+                fullName: editRow.fullName,
+                positionId: editRow.positionId,
+                phone: editRow.phone ?? "",
+                username: undefined,
+                password: undefined,
+              }
+            : undefined
+        }
+        onSubmit={async (values) => {
+          if (!editRow) return;
+          const res = await updateEmployee({ id: editRow.id, ...values });
+          if (res.ok) {
+            setEditRow(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Lengkap</label>
+              <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
+              {f.formState.errors.fullName && <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Jabatan</label>
+              <Select
+                value={String(f.watch("positionId") ?? "")}
+                onValueChange={(v) => f.setValue("positionId", Number(v))}
+              >
+                <SelectTrigger><SelectValue placeholder="Pilih jabatan" /></SelectTrigger>
+                <SelectContent>
+                  {positions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {f.formState.errors.positionId && <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Telepon</label>
+              <Input {...f.register("phone")} placeholder="Nomor telepon" />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Username (opsional)</label>
+                <Input {...f.register("username")} placeholder="Username (isi bersama password untuk membuat akun)" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Password (opsional)</label>
+                <Input type="password" {...f.register("password")} placeholder="Password baru (opsional)" />
+              </div>
+            </div>
+          </>
+        )}
+      />
+
+      <CrudModal<PasswordForm>
+        open={!!pwdRow}
+        onOpenChange={(v) => !v && setPwdRow(null)}
+        title="Ubah Password Akun"
+        description={pwdRow?.username ? `Untuk pengguna: ${pwdRow.username}` : undefined}
+        schema={PasswordSchema}
+        defaultValues={{ password: "" }}
+        onSubmit={async (values) => {
+          if (!pwdRow) return;
+          const res = await changeEmployeePassword({ id: pwdRow.id, password: values.password });
+          if (res.ok) {
+            setPwdRow(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Password Baru</label>
+            <Input type="password" {...f.register("password")} autoFocus placeholder="Minimal 6 karakter" />
+            {f.formState.errors.password && <p className="text-sm text-destructive">{String(f.formState.errors.password.message)}</p>}
+          </div>
+        )}
+        submitText="Simpan Password"
+      />
+
+      <DeleteConfirm
+        open={!!deleting}
+        title="Yakin ingin menghapus?"
+        description={`Data "${deleting?.fullName ?? ""}" akan dihapus permanen.`}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          const res = await deleteEmployee(deleting.id);
+          if (res.ok) {
+            setDeleting(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+      />
+    </main>
   );
 }
