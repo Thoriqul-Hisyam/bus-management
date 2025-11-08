@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import Pagination from "@/components/shared/pagination";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
 import { CrudModal } from "@/components/shared/crud-modal";
+import PasswordField from "@/components/shared/password-field";
 import { DeleteConfirm } from "@/components/shared/delete-confirm";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
@@ -308,8 +309,7 @@ export default function EmployeesPage() {
                 {f.formState.errors.username && <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Password (opsional)</label>
-                <Input type="password" {...f.register("password")} placeholder="Password" />
+                <PasswordField form={f} name="password" label="Password (opsional)" />
                 {f.formState.errors.password && <p className="text-sm text-destructive">{String(f.formState.errors.password.message)}</p>}
               </div>
             </div>
@@ -377,8 +377,7 @@ export default function EmployeesPage() {
                 <Input {...f.register("username")} placeholder="Username (isi bersama password untuk membuat akun)" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Password (opsional)</label>
-                <Input type="password" {...f.register("password")} placeholder="Password baru (opsional)" />
+                <PasswordField form={f} name="password" label="Password (opsional)" placeholder="Password baru (Opsional)" />
               </div>
             </div>
           </>
@@ -404,8 +403,7 @@ export default function EmployeesPage() {
         }}
         renderFields={(f) => (
           <div className="space-y-2">
-            <label className="text-sm font-medium">Password Baru</label>
-            <Input type="password" {...f.register("password")} autoFocus placeholder="Minimal 6 karakter" />
+            <PasswordField form={f} name="password" label="Password Baru" placeholder="Minimal 6 karakter" />
             {f.formState.errors.password && <p className="text-sm text-destructive">{String(f.formState.errors.password.message)}</p>}
           </div>
         )}
