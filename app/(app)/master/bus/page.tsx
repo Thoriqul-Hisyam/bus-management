@@ -50,7 +50,7 @@ type Row = {
 const FormSchema = z.object({
   name: z.string().min(1, "Nama wajib diisi"),
   plateNo: z.string().min(1, "Nomor polisi wajib diisi"),
-  busTypeId: z.coerce.number().int().positive("Jenis armada wajib dipilih"),
+  busTypeId: z.coerce.number().int().positive("Tipe armada wajib dipilih"),
   capacity: z.coerce.number().int().min(0, "Minimal 0"),
 });
 type FormValues = z.infer<typeof FormSchema>;
@@ -159,7 +159,7 @@ export default function BusPage() {
       },
       {
         key: "busType",
-        label: "Jenis Armada",
+        label: "Tipe armada",
         sortable: true,
         render: (r) => r.busType?.name ?? "—",
       },

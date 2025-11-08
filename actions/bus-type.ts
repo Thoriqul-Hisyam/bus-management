@@ -41,7 +41,7 @@ export async function listBusTypes(input?: {
 
     return ok({ rows, total });
   } catch (e: any) {
-    return err(`Gagal mengambil jenis armada: ${e.message ?? e}`);
+    return err(`Gagal mengambil tipe armada: ${e.message ?? e}`);
   }
 }
 
@@ -58,10 +58,10 @@ export async function createBusType(input: unknown): Promise<Result<any>> {
   } catch (e: any) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       if ((e.meta?.target as string[])?.includes("name")) {
-        return err("Nama jenis armada sudah digunakan.");
+        return err("Nama tipe armada sudah digunakan.");
       }
     }
-    return err(`Gagal menambah jenis armada: ${e.message ?? e}`);
+    return err(`Gagal menambah tipe armada: ${e.message ?? e}`);
   }
 }
 
@@ -79,10 +79,10 @@ export async function updateBusType(input: unknown): Promise<Result<any>> {
   } catch (e: any) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       if ((e.meta?.target as string[])?.includes("name")) {
-        return err("Nama jenis armada sudah digunakan.");
+        return err("Nama tipe armada sudah digunakan.");
       }
     }
-    return err(`Gagal mengupdate jenis armada: ${e.message ?? e}`);
+    return err(`Gagal mengupdate tipe armada: ${e.message ?? e}`);
   }
 }
 
@@ -90,11 +90,11 @@ export async function deleteBusType(id: number): Promise<Result<{ message: strin
   try {
     await prisma.busType.delete({ where: { id } });
     revalidateMasterBusTypes();
-    return ok({ message: "Jenis armada dihapus" });
+    return ok({ message: "Tipe armada dihapus" });
   } catch (e: any) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
       return err("Tidak bisa menghapus: jenis ini masih dipakai oleh data Bus.");
     }
-    return err(`Gagal menghapus jenis armada: ${e.message ?? e}`);
+    return err(`Gagal menghapus tipe armada: ${e.message ?? e}`);
   }
 }

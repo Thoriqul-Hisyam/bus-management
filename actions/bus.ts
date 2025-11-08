@@ -177,6 +177,6 @@ export async function listBusTypes(): Promise<Result<Array<{ id: number; name: s
     });
     return ok(rows);
   } catch (e: any) {
-    return err(`Gagal mengambil jenis armada: ${e.message ?? e}`);
+    return err(`Gagal mengambil tipe armada: ${e.message ?? e}`);
   }
 }

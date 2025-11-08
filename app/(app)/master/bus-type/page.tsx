@@ -18,7 +18,7 @@ type Row = { id: number; name: string };
 type SortKey = "name_asc" | "name_desc" | "id_asc" | "id_desc";
 
 const FormSchema = z.object({
-  name: z.string().min(1, "Nama jenis armada wajib diisi"),
+  name: z.string().min(1, "Nama tipe armada wajib diisi"),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
