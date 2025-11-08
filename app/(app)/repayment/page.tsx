@@ -1,7 +1,18 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { listSchedules, updateStatusSchedule } from "@/actions/schedule";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 export default function ScheduleInputPage() {
   const [loading, setLoading] = useState(true);
@@ -52,62 +63,59 @@ export default function ScheduleInputPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto bg-white p-8 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6 border-b pb-3">
-          Tagihan Pembayaran
-        </h2>
-
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="w-full border-collapse">
-            <thead className="bg-blue-50 text-gray-700 text-sm uppercase">
-              <tr>
-                <th className="p-3 text-left font-medium">Customer</th>
-                <th className="p-3 text-left font-medium">Armada</th>
-                <th className="p-3 text-left font-medium">Tanggal DP</th>
-                <th className="p-3 text-left font-medium">DP</th>
-                <th className="p-3 text-left font-medium">Price</th>
-                <th className="p-3 text-center font-medium">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
+      <Card className="max-w-7xl mx-auto">
+        <CardHeader>
+          <CardTitle>Tagihan Pembayaran</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Armada</TableHead>
+                <TableHead>Tanggal DP</TableHead>
+                <TableHead>DP</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead className="text-center">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {scheduleList.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-t hover:bg-gray-50 transition-all"
-                >
-                  <td className="p-3">{s.customer}</td>
-                  <td className="p-3">{s.bus}</td>
-                  <td className="p-3">{s.paidAt}</td>
-                  <td className="p-3 text-center">
+                <TableRow key={s.id} className="hover:bg-gray-50">
+                  <TableCell>{s.customer}</TableCell>
+                  <TableCell>{s.bus}</TableCell>
+                  <TableCell>{s.paidAt}</TableCell>
+                  <TableCell className="text-center">
                     Rp {s.amount.toLocaleString()}
-                  </td>
-                  <td className="p-3 text-center">
+                  </TableCell>
+                  <TableCell className="text-center">
                     Rp {s.priceTotal.toLocaleString()}
-                  </td>
-                  <td className="p-3 text-center flex gap-2 justify-center">
-                    <button
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleMarkLunas(s)}
-                      className="text-green-600 hover:text-green-800 font-medium"
                     >
                       Lunas
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
               {scheduleList.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="11"
-                    className="text-center p-6 text-gray-500 italic"
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center text-gray-500 italic p-6"
                   >
                     Belum ada jadwal
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
