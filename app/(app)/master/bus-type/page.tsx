@@ -1,186 +1,262 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import Swal from "sweetalert2";
-import "sweetalert2/dist/sweetalert2.min.css";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { z } from "zod";
 import { listBusTypes, createBusType, updateBusType, deleteBusType } from "@/actions/bus-type";
 
-type Row = { id: number; name: string; createdAt: string | Date; updatedAt: string | Date };
+import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import { CrudModal } from "@/components/shared/crud-modal";
+import { DeleteConfirm } from "@/components/shared/delete-confirm";
+import { ActionDropdown } from "@/components/shared/action-dropdown";
+import Pagination from "@/components/shared/pagination";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+type Row = { id: number; name: string };
+
+type SortKey = "name_asc" | "name_desc" | "id_asc" | "id_desc";
+
+const FormSchema = z.object({
+  name: z.string().min(1, "Nama jenis armada wajib diisi"),
+});
+type FormValues = z.infer<typeof FormSchema>;
 
 export default function BusTypePage() {
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("name_asc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
   const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    id: null as number | null,
-    name: "",
-  });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editRow, setEditRow] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState<Row | null>(null);
 
-  async function refresh() {
-    setLoading(true);
-    const res = await listBusTypes();
-    if (res.ok) setRows(res.data);
-    else Swal.fire({ icon: "error", title: "Error", text: res.error });
-    setLoading(false);
+  async function fetchData(opts?: {
+    q?: string;
+    sort?: SortKey;
+    page?: number;
+    perPage?: number;
+  }) {
+    const _q = opts?.q ?? q;
+    const _sort = opts?.sort ?? sort;
+    const _page = opts?.page ?? page;
+    const _perPage = opts?.perPage ?? perPage;
+
+    setIsLoading(true);
+    try {
+      const res = await listBusTypes({
+        q: _q,
+        sort: _sort,
+        page: _page,
+        perPage: _perPage,
+      });
+      if (res.ok) {
+        setRows(res.data.rows);
+        setTotal(res.data.total);
+      } else {
+        console.error(res.error);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   useEffect(() => {
-    refresh();
+    startTransition(async () => {
+      await fetchData({ page: 1 });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSave = async () => {
-    if (!form.name) {
-      Swal.fire({
-        icon: "warning",
-        title: "Data belum lengkap",
-        text: "Nama jenis armada wajib diisi!",
-        confirmButtonColor: "#2563eb",
-      });
-      return;
-    }
+  useEffect(() => {
+    startTransition(() => void fetchData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, page, perPage]);
 
-    startTransition(async () => {
-      const payload = {
-        id: form.id ?? undefined,
-        name: form.name.trim(),
-      };
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      startTransition(() => void fetchData({ page: 1 }));
+    }, 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-      const res = form.id ? await updateBusType(payload) : await createBusType(payload);
+  const startIndex = (page - 1) * perPage;
+  const columns: DataTableColumn<Row>[] = useMemo(
+    () => [
+      {
+        key: "no",
+        label: "No.",
+        className: "w-16 text-center",
+        render: (_r, i) => i + 1,
+      },
+      {
+        key: "name",
+        label: "Nama",
+        sortable: true,
+        render: (r) => <span className="font-medium">{r.name}</span>,
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        className: "w-24 text-right",
+        render: (r) => {
+          const items = [
+            { key: "edit", label: "Edit" },
+            { key: "delete", label: "Hapus", destructive: true },
+          ] as const;
 
-      if (res.ok) {
-        Swal.fire({
-          icon: "success",
-          title: form.id ? "Data diperbarui" : "Data ditambahkan",
-          showConfirmButton: false,
-          timer: 1200,
-        });
-        setForm({ id: null, name: "" });
-        await refresh();
-      } else {
-        Swal.fire({ icon: "error", title: "Gagal", text: res.error });
-      }
-    });
-  };
+          return (
+            <ActionDropdown
+              items={items as any}
+              onClickItem={(key) => {
+                if (key === "edit") setEditRow(r);
+                else if (key === "delete") setDeleting(r);
+              }}
+            />
+          );
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [page, perPage]
+  );
 
-  const onDelete = (id: number) => {
-    Swal.fire({
-      title: "Yakin ingin menghapus data ini?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, hapus",
-      cancelButtonText: "Batal",
-    }).then((r) => {
-      if (!r.isConfirmed) return;
-      startTransition(async () => {
-        const res = await deleteBusType(id);
-        if (res.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Data dihapus",
-            timer: 1000,
-            showConfirmButton: false,
-          });
-          await refresh();
-        } else {
-          Swal.fire({ icon: "error", title: "Gagal", text: res.error });
-        }
-      });
-    });
-  };
-
-  const editRow = (r: Row) => {
-    setForm({ id: r.id, name: r.name });
-  };
-
-  const formatDate = (d: string | Date) => {
-    try {
-      const dt = new Date(d);
-      // tampilkan ringkas: dd/mm/yyyy hh:mm
-      return `${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-    } catch {
-      return "-";
-    }
-  };
+  const sortKey = sort.startsWith("name")
+    ? "name"
+    : sort.startsWith("id")
+    ? "id"
+    : undefined;
+  const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen text-gray-800">
-      <h1 className="text-2xl font-bold mb-8">Master Jenis Armada</h1>
+    <main className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Master Tipe Armada</h1>
 
-      <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4 mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div>
-          <label className="text-sm text-gray-600">Nama Jenis Armada</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full border rounded-lg p-2"
-            placeholder="Misal: EKONOMI / VIP / EKSEKUTIF"
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2 w-full sm:max-w-sm">
+          <Input
+            placeholder="Cari nama tipe armada..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
           />
+          {q ? (
+            <Button variant="ghost" onClick={() => setQ("")}>
+              Reset
+            </Button>
+          ) : null}
         </div>
 
-        <div className="flex items-end">
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg w-full"
-          >
-            {form.id ? "Update" : "+ Tambah"}
-          </button>
+        <div className="flex items-center sm:ml-auto">
+          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-blue-50 text-gray-700 uppercase text-xs font-semibold">
-            <tr>
-              <th className="p-3 text-left">Nama</th>
-              <th className="p-3 text-left">Dibuat</th>
-              <th className="p-3 text-left">Diubah</th>
-              <th className="p-3 text-center w-24">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="text-center p-4 text-gray-500">
-                  Loading...
-                </td>
-              </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="text-center p-4 text-gray-500 italic">
-                  Belum ada data
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{r.name}</td>
-                  <td className="p-3">{formatDate(r.createdAt)}</td>
-                  <td className="p-3">{formatDate(r.updatedAt)}</td>
-                  <td className="p-3 text-center space-x-3">
-                    <button
-                      onClick={() => editRow(r)}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(r.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
+      <DataTable<Row>
+        rows={rows}
+        columns={columns}
+        isLoading={isLoading || isPending}
+        startIndex={startIndex}
+        sortKey={sortKey}
+        sortDir={sortDir as any}
+        onHeaderClick={(col) => {
+          if (col.key === "name") {
+            setPage(1);
+            setSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"));
+          }
+        }}
+      />
+
+      <div className="mt-3">
+        <Pagination
+          page={page}
+          perPage={perPage}
+          total={total}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(pp) => {
+            setPage(1);
+            setPerPage(pp);
+          }}
+        />
+      </div>
+
+      <CrudModal<FormValues>
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Tambah Tipe Armada"
+        schema={FormSchema}
+        defaultValues={{ name: "" }}
+        onSubmit={async (values) => {
+          const res = await createBusType(values);
+          if (res.ok) {
+            setCreateOpen(false);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nama</label>
+            <Input {...f.register("name")} placeholder="Misal: EKONOMI / VIP / EKSEKUTIF" autoFocus />
+            {f.formState.errors.name && (
+              <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </div>
+        )}
+      />
+
+      <CrudModal<FormValues>
+        open={!!editRow}
+        onOpenChange={(v) => !v && setEditRow(null)}
+        title="Ubah Tipe Armada"
+        schema={FormSchema}
+        defaultValues={editRow ? { name: editRow.name } : undefined}
+        onSubmit={async (values) => {
+          if (!editRow) return;
+          const res = await updateBusType({ id: editRow.id, ...values });
+          if (res.ok) {
+            setEditRow(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nama</label>
+            <Input {...f.register("name")} placeholder="Misal: EKONOMI / VIP / EKSEKUTIF" autoFocus />
+            {f.formState.errors.name && (
+              <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+            )}
+          </div>
+        )}
+      />
+
+      <DeleteConfirm
+        open={!!deleting}
+        title="Yakin ingin menghapus?"
+        description={`Data "${deleting?.name ?? ""}" akan dihapus permanen.`}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          const res = await deleteBusType(deleting.id);
+          if (res.ok) {
+            setDeleting(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+      />
+    </main>
   );
 }

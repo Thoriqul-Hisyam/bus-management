@@ -6,13 +6,40 @@ import { BusTypeCreateSchema, BusTypeUpdateSchema } from "@/validators/bus-type"
 import { revalidateMasterBusTypes } from "./_utils";
 import { Prisma } from "@prisma/client";
 
-export async function listBusTypes(): Promise<Result<Array<{ id: number; name: string; createdAt: Date; updatedAt: Date }>>> {
+export async function listBusTypes(input?: {
+  q?: string;
+  page?: number;
+  perPage?: number;
+  sort?: "name_asc" | "name_desc" | "id_asc" | "id_desc";
+}): Promise<Result<{ rows: Array<{ id: number; name: string }>; total: number }>> {
   try {
-    const rows = await prisma.busType.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, createdAt: true, updatedAt: true },
-    });
-    return ok(rows);
+    const q = input?.q?.trim() ?? "";
+    const page = Math.max(Number(input?.page ?? 1), 1);
+    const perPage = Math.min(Math.max(Number(input?.perPage ?? 10), 1), 100);
+    const sort = input?.sort ?? "name_asc";
+
+    const orderBy =
+      sort === "name_asc" ? [{ name: "asc" as const }] :
+      sort === "name_desc" ? [{ name: "desc" as const }] :
+      sort === "id_asc" ? [{ id: "asc" as const }] :
+      [{ id: "desc" as const }];
+
+    const where: Prisma.BusTypeWhereInput = q
+      ? { name: { contains: q } }
+      : {};
+
+    const [rows, total] = await Promise.all([
+      prisma.busType.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * perPage,
+        take: perPage,
+        select: { id: true, name: true },
+      }),
+      prisma.busType.count({ where }),
+    ]);
+
+    return ok({ rows, total });
   } catch (e: any) {
     return err(`Gagal mengambil jenis armada: ${e.message ?? e}`);
   }
