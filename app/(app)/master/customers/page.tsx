@@ -1,181 +1,351 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import Swal from "sweetalert2";
-import { listCustomers, createCustomer, updateCustomer, deleteCustomer } from "@/actions/customer";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { z } from "zod";
+import {
+  listCustomers,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
+} from "@/actions/customer";
 
-type CustomerRow = {
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
+import { CrudModal } from "@/components/shared/crud-modal";
+import { DeleteConfirm } from "@/components/shared/delete-confirm";
+import Pagination from "@/components/shared/pagination";
+import { ActionDropdown } from "@/components/shared/action-dropdown";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+type SortKey = "name_asc" | "name_desc" | "travel_asc" | "travel_desc";
+
+type Row = {
   id: number;
   name: string;
   travel?: string | null;
   phone?: string | null;
 };
 
-type FormState = {
-  id: number | null;
-  name: string;
-  travel: string;
-  phone: string;
-};
+const FormSchema = z.object({
+  name: z.string().min(1, "Nama wajib diisi"),
+  travel: z.string().optional(),
+  phone: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof FormSchema>;
 
 export default function CustomerPage() {
-  const [customers, setCustomers] = useState<CustomerRow[]>([]);
-  const [isPending, startTransition] = useTransition();
-  const [form, setForm] = useState<FormState>({ id: null, name: "", travel: "", phone: "" });
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("name_asc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
-  async function refresh() {
-    const res = await listCustomers();
-    if (res.ok) setCustomers(res.data as CustomerRow[]);
-    else Swal.fire("Gagal", res.error, "error");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+
+  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editRow, setEditRow] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState<Row | null>(null);
+
+  async function fetchData(opts?: {
+    q?: string;
+    sort?: SortKey;
+    page?: number;
+    perPage?: number;
+  }) {
+    const _q = opts?.q ?? q;
+    const _sort = opts?.sort ?? sort;
+    const _page = opts?.page ?? page;
+    const _perPage = opts?.perPage ?? perPage;
+
+    setIsLoading(true);
+    try {
+      const res = await listCustomers({
+        q: _q,
+        sort: _sort,
+        page: _page,
+        perPage: _perPage,
+      });
+      if (res.ok) {
+        setRows(res.data.rows as Row[]);
+        setTotal(res.data.total);
+      } else {
+        console.error(res.error);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    startTransition(() => void fetchData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, page, perPage]);
 
-  const resetForm = () => setForm({ id: null, name: "", travel: "", phone: "" });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      startTransition(() => void fetchData({ page: 1 }));
+    }, 450);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-  const addOrUpdateCustomer = () => {
-    if (!form.name.trim()) {
-      Swal.fire("Peringatan", "Nama wajib diisi!", "warning");
-      return;
-    }
+  const startIndex = (page - 1) * perPage;
 
-    startTransition(async () => {
-      const payload = {
-        id: form.id ?? undefined,
-        name: form.name.trim(),
-        travel: form.travel.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-      };
+  const columns: DataTableColumn<Row>[] = useMemo(
+    () => [
+      {
+        key: "no",
+        label: "No.",
+        className: "w-12 text-center",
+        render: (_r, i) => i + 1,
+      },
+      {
+        key: "name",
+        label: "Nama Customer",
+        sortable: true,
+        render: (r) => <span className="font-medium">{r.name}</span>,
+      },
+      {
+        key: "travel",
+        label: "Travel",
+        sortable: true,
+        render: (r) => r.travel ?? "—",
+      },
+      {
+        key: "phone",
+        label: "Telepon",
+        render: (r) => r.phone ?? "—",
+      },
+      {
+        key: "actions",
+        label: "Aksi",
+        className: "w-24 text-right",
+        render: (r) => {
+          const items = [
+            { key: "edit", label: "Edit" },
+            { key: "delete", label: "Hapus", destructive: true },
+          ] as const;
+          return (
+            <ActionDropdown
+              items={items as any}
+              onClickItem={(key) => {
+                if (key === "edit") setEditRow(r);
+                else if (key === "delete") setDeleting(r);
+              }}
+            />
+          );
+        },
+      },
+    ],
+    [page, perPage]
+  );
 
-      const res = form.id ? await updateCustomer(payload) : await createCustomer(payload);
-
-      if (res.ok) {
-        Swal.fire("Berhasil", form.id ? "Customer diperbarui" : "Customer ditambahkan", "success");
-        resetForm();
-        await refresh();
-      } else {
-        Swal.fire("Gagal", res.error, "error");
-      }
-    });
-  };
-
-  const onDelete = async (id: number) => {
-    const confirm = await Swal.fire({
-      title: "Yakin ingin menghapus data ini?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonText: "Batal",
-      confirmButtonText: "Ya, hapus!",
-    });
-    if (!confirm.isConfirmed) return;
-
-    startTransition(async () => {
-      const res = await deleteCustomer(id);
-      if (res.ok) {
-        Swal.fire("Dihapus!", "Data customer telah dihapus.", "success");
-        await refresh();
-      } else {
-        Swal.fire("Gagal", res.error, "error");
-      }
-    });
-  };
-
-  const editCustomer = (c: CustomerRow) => {
-    setForm({
-      id: c.id,
-      name: c.name ?? "",
-      travel: c.travel ?? "",
-      phone: c.phone ?? "",
-    });
-  };
+  const sortKey = sort.startsWith("name")
+    ? "name"
+    : sort.startsWith("travel")
+    ? "travel"
+    : undefined;
+  const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen text-gray-800">
-      <h1 className="text-2xl font-bold mb-8 flex items-center gap-2">Master Data Customer</h1>
+    <main className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Master Data Customer</h1>
 
-      {/* Form Input */}
-      <div className="grid md:grid-cols-4 sm:grid-cols-2 gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Nama Customer"
-          className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-        <input
-          type="text"
-          placeholder="Travel"
-          className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-          value={form.travel}
-          onChange={(e) => setForm({ ...form, travel: e.target.value })}
-        />
-        <input
-          type="text"
-          placeholder="Nomor Telepon"
-          className="border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-100 rounded-lg p-3 transition-all"
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={addOrUpdateCustomer}
-            disabled={isPending}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-3 rounded-lg font-medium shadow-sm transition-all w-full"
-          >
-            {form.id ? "Simpan" : "+ Tambah"}
-          </button>
-          {form.id && (
-            <button
-              onClick={resetForm}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-lg font-medium shadow-sm transition-all"
-            >
-              Batal
-            </button>
-          )}
+      {/* Toolbar */}
+      <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Cari nama / travel / telepon..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          {q ? (
+            <Button variant="ghost" onClick={() => setQ("")}>
+              Reset
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="flex items-center sm:justify-end">
+          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-blue-50 text-gray-700 uppercase text-xs font-semibold">
-            <tr>
-              <th className="p-3 text-left">Nama</th>
-              <th className="p-3 text-left">Travel</th>
-              <th className="p-3 text-left">Telepon</th>
-              <th className="p-3 text-center w-24">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.length > 0 ? (
-              customers.map((c) => (
-                <tr key={c.id} className="border-t hover:bg-gray-50 transition-colors">
-                  <td className="p-3">{c.name}</td>
-                  <td className="p-3">{c.travel}</td>
-                  <td className="p-3">{c.phone}</td>
-                  <td className="p-3 text-center space-x-3">
-                    <button onClick={() => editCustomer(c)} className="text-blue-600 hover:text-blue-700 font-medium">
-                      Edit
-                    </button>
-                    <button onClick={() => onDelete(c.id)} className="text-red-600 hover:text-red-700 font-medium">
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} className="text-center p-6 text-gray-500 italic">
-                  Belum ada data customer
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <DataTable<Row>
+        rows={rows}
+        columns={columns}
+        isLoading={isLoading || isPending}
+        startIndex={startIndex}
+        sortKey={sortKey}
+        sortDir={sortDir as any}
+        onHeaderClick={(col) => {
+          if (col.key === "name") {
+            setPage(1);
+            setSort((p) => (p === "name_asc" ? "name_desc" : "name_asc"));
+          }
+          if (col.key === "travel") {
+            setPage(1);
+            setSort((p) => (p === "travel_asc" ? "travel_desc" : "travel_asc"));
+          }
+        }}
+      />
+
+      {/* Pagination */}
+      <div className="mt-3">
+        <Pagination
+          page={page}
+          perPage={perPage}
+          total={total}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(pp) => {
+            setPage(1);
+            setPerPage(pp);
+          }}
+        />
       </div>
-    </div>
+
+      {/* Create Modal */}
+      <CrudModal<FormValues>
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Tambah Customer"
+        schema={FormSchema}
+        defaultValues={{
+          name: "",
+          travel: "",
+          phone: "",
+        }}
+        onSubmit={async (values) => {
+          const res = await createCustomer(values);
+          if (res.ok) {
+            setCreateOpen(false);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Customer</label>
+              <Input
+                {...f.register("name")}
+                placeholder="Nama customer"
+                autoFocus
+              />
+              {f.formState.errors.name && (
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.name.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Travel</label>
+              <Input
+                {...f.register("travel")}
+                placeholder="Nama travel (opsional)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nomor Telepon</label>
+              <Input
+                {...f.register("phone")}
+                placeholder="Nomor telepon (opsional)"
+              />
+            </div>
+          </>
+        )}
+      />
+
+      {/* Edit Modal */}
+      <CrudModal<FormValues>
+        open={!!editRow}
+        onOpenChange={(v) => !v && setEditRow(null)}
+        title="Ubah Customer"
+        schema={FormSchema}
+        defaultValues={
+          editRow
+            ? {
+                name: editRow.name,
+                travel: editRow.travel ?? "",
+                phone: editRow.phone ?? "",
+              }
+            : undefined
+        }
+        onSubmit={async (values) => {
+          if (!editRow) return;
+          const res = await updateCustomer({ id: editRow.id, ...values });
+          if (res.ok) {
+            setEditRow(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Customer</label>
+              <Input
+                {...f.register("name")}
+                placeholder="Nama customer"
+                autoFocus
+              />
+              {f.formState.errors.name && (
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.name.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Travel</label>
+              <Input
+                {...f.register("travel")}
+                placeholder="Nama travel (opsional)"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nomor Telepon</label>
+              <Input
+                {...f.register("phone")}
+                placeholder="Nomor telepon (opsional)"
+              />
+            </div>
+          </>
+        )}
+      />
+
+      {/* Delete Confirm */}
+      <DeleteConfirm
+        open={!!deleting}
+        title="Hapus Customer"
+        description={`Data "${deleting?.name ?? ""}" akan dihapus permanen.`}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          const res = await deleteCustomer(deleting.id);
+          if (res.ok) {
+            setDeleting(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+      />
+    </main>
   );
 }
