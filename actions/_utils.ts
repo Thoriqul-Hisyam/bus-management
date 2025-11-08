@@ -15,7 +15,7 @@ export async function revalidateMasterSchedules() {
 }
 
 export async function revalidateMasterPositions() {
-  revalidatePath("/master/positions");
+  revalidatePath("/master/position");
 }
 
 export async function revalidateMasterCustomers() {
