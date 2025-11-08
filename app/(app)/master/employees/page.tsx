@@ -7,7 +7,6 @@ import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import Pagination from "@/components/shared/pagination";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
 import { CrudModal } from "@/components/shared/crud-modal";
-import PasswordField from "@/components/shared/password-field";
 import { DeleteConfirm } from "@/components/shared/delete-confirm";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
@@ -19,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import PasswordField from "@/components/shared/password-field";
 
 type SortKey =
   | "name_asc"
@@ -46,21 +46,29 @@ const EmployeeFormSchema = z.object({
   username: z.string().min(3, "Min 3 karakter").optional(),
   password: z.string().min(6, "Min 6 karakter").optional(),
 }).refine(
-  (data) => (!!data.username && !!data.password) || (!data.username && !data.password),
-  { message: "Isi username dan password bersamaan untuk membuat/mengubah akun.", path: ["username"] }
+  (data) =>
+    (!!data.username && !!data.password) || (!data.username && !data.password),
+  {
+    message: "Isi username dan password bersamaan untuk membuat/mengubah akun.",
+    path: ["username"],
+  }
 );
 type EmployeeForm = z.infer<typeof EmployeeFormSchema>;
 
-const PasswordSchema = z.object({ password: z.string().min(6, "Min 6 karakter") });
+const PasswordSchema = z.object({
+  password: z.string().min(6, "Min 6 karakter"),
+});
 type PasswordForm = z.infer<typeof PasswordSchema>;
 
 export default function EmployeesPage() {
+  // UI state
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("name_asc");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [status, setStatus] = useState<StatusFilter>("all");
 
+  // data state
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [total, setTotal] = useState(0);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -68,6 +76,7 @@ export default function EmployeesPage() {
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
 
+  // modals
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<EmployeeRow | null>(null);
   const [deleting, setDeleting] = useState<EmployeeRow | null>(null);
@@ -88,7 +97,13 @@ export default function EmployeesPage() {
 
     setIsLoading(true);
     try {
-      const res = await listEmployees({ q: _q, sort: _sort, page: _page, perPage: _perPage, status: _status });
+      const res = await listEmployees({
+        q: _q,
+        sort: _sort,
+        page: _page,
+        perPage: _perPage,
+        status: _status,
+      });
       if (res.ok) {
         setRows(res.data.rows);
         setTotal(res.data.total);
@@ -114,6 +129,7 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, page, perPage, status]);
 
+  // debounce search
   useEffect(() => {
     const t = setTimeout(() => {
       setPage(1);
@@ -123,33 +139,73 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
+  // columns
   const startIndex = (page - 1) * perPage;
   const columns: DataTableColumn<EmployeeRow>[] = useMemo(
     () => [
-      { key: "no", label: "No.", className: "w-16 text-center", render: (_r, i) => i + 1 },
-      { key: "fullName", label: "Nama", sortable: true, render: (r) => <span className="font-medium">{r.fullName}</span> },
-      { key: "position", label: "Jabatan", sortable: true, render: (r) => r.position?.name ?? "-" },
-      { key: "phone", label: "Telepon", render: (r) => r.phone ?? "-" },
-      { key: "username", label: "Username", render: (r) => r.username ?? "—" },
       {
-        key: "status", label: "Status Akun", className: "w-36",
-        render: (r) =>
-          r.username ? (
-            <span className={r.isActive ? "inline-flex px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700"
-                                        : "inline-flex px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700"}>
-              {r.isActive ? "Aktif" : "Nonaktif"}
-            </span>
-          ) : <span className="text-xs text-muted-foreground">—</span>
+        key: "no",
+        label: "No.",
+        className: "w-16 text-center",
+        render: (_r, i) => i + 1,
       },
       {
-        key: "actions", label: "Aksi", className: "w-24 text-right",
+        key: "fullName",
+        label: "Nama",
+        sortable: true,
+        render: (r) => <span className="font-medium">{r.fullName}</span>,
+      },
+      {
+        key: "position",
+        label: "Jabatan",
+        sortable: true,
+        render: (r) => r.position?.name ?? "-",
+      },
+      {
+        key: "phone",
+        label: "Telepon",
+        render: (r) => r.phone ?? "-",
+      },
+      {
+        key: "username",
+        label: "Username",
+        render: (r) => r.username ?? "—",
+      },
+      {
+        key: "status",
+        label: "Status Akun",
+        className: "w-36",
+        render: (r) =>
+          r.username
+            ? (
+                <span
+                  className={
+                    r.isActive
+                      ? "inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700"
+                      : "inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700"
+                  }
+                >
+                  {r.isActive ? "Aktif" : "Nonaktif"}
+                </span>
+              )
+            : <span className="text-xs text-muted-foreground">—</span>,
+      },
+      {
+        key: "actions",
+        label: "Aksi",
+        className: "w-24 text-right",
         render: (r) => {
           const items = [
             { key: "edit", label: "Edit" },
-            ...(r.username ? [
-              { key: "change-password", label: "Ubah Password" },
-              { key: "toggle-status", label: r.isActive ? "Nonaktifkan Akun" : "Aktifkan Akun" },
-            ] : []),
+            ...(r.username
+              ? [
+                  { key: "change-password", label: "Ubah Password" },
+                  {
+                    key: "toggle-status",
+                    label: r.isActive ? "Nonaktifkan Akun" : "Aktifkan Akun",
+                  },
+                ]
+              : []),
             { key: "delete", label: "Hapus", destructive: true },
           ] as const;
 
@@ -163,8 +219,11 @@ export default function EmployeesPage() {
                 else if (key === "toggle-status") {
                   startTransition(async () => {
                     const res = await toggleEmployeeAccountStatus(r.id);
-                    if (res.ok) await fetchData();
-                    else console.error(res.error);
+                    if (res.ok) {
+                      await fetchData();
+                    } else {
+                      console.error(res.error);
+                    }
                   });
                 }
               }}
@@ -183,34 +242,38 @@ export default function EmployeesPage() {
     undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
-  const EmployeeFormSchema = z.object({
-    fullName: z.string().min(1, "Nama wajib diisi"),
-    positionId: z.coerce.number().int().positive({ message: "Jabatan wajib dipilih" }),
-    phone: z.string().optional(),
-    username: z.string().min(3, "Min 3 karakter").optional(),
-    password: z.string().min(6, "Min 6 karakter").optional(),
-  }).refine(
-    (data) => (!!data.username && !!data.password) || (!data.username && !data.password),
-    { message: "Isi username dan password bersamaan untuk membuat/mengubah akun.", path: ["username"] }
-  );
-
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Master Data Karyawan</h1>
 
+      {/* Toolbar */}
       <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <div className="flex items-center gap-2">
-          <Input placeholder="Cari nama / username / jabatan..." value={q} onChange={(e) => setQ(e.target.value)} />
-          {q ? <Button variant="ghost" onClick={() => setQ("")}>Reset</Button> : null}
+          <Input
+            placeholder="Cari nama / username / jabatan..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="w-full"
+          />
+          {q ? (
+            <Button variant="ghost" onClick={() => setQ("")}>
+              Reset
+            </Button>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Status Akun</span>
           <Select
             value={status}
-            onValueChange={(v: StatusFilter) => { setPage(1); setStatus(v); }}
+            onValueChange={(v: StatusFilter) => {
+              setPage(1);
+              setStatus(v);
+            }}
           >
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua</SelectItem>
               <SelectItem value="active">Aktif</SelectItem>
@@ -224,6 +287,7 @@ export default function EmployeesPage() {
         </div>
       </div>
 
+      {/* Table */}
       <DataTable<EmployeeRow>
         rows={rows}
         columns={columns}
@@ -243,6 +307,7 @@ export default function EmployeesPage() {
         }}
       />
 
+      {/* Pagination */}
       <div className="mt-3">
         <Pagination
           page={page}
@@ -253,6 +318,7 @@ export default function EmployeesPage() {
         />
       </div>
 
+      {/* Create Modal */}
       <CrudModal<EmployeeForm>
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -280,7 +346,9 @@ export default function EmployeesPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Lengkap</label>
               <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
-              {f.formState.errors.fullName && <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>}
+              {f.formState.errors.fullName && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -289,12 +357,20 @@ export default function EmployeesPage() {
                 value={String(f.watch("positionId") ?? "")}
                 onValueChange={(v) => f.setValue("positionId", Number(v))}
               >
-                <SelectTrigger><SelectValue placeholder="Pilih jabatan" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jabatan" />
+                </SelectTrigger>
                 <SelectContent>
-                  {positions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {f.formState.errors.positionId && <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>}
+              {f.formState.errors.positionId && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -306,17 +382,17 @@ export default function EmployeesPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Username (opsional)</label>
                 <Input {...f.register("username")} placeholder="Username" />
-                {f.formState.errors.username && <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>}
+                {f.formState.errors.username && (
+                  <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>
+                )}
               </div>
-              <div className="space-y-2">
-                <PasswordField form={f} name="password" label="Password (opsional)" />
-                {f.formState.errors.password && <p className="text-sm text-destructive">{String(f.formState.errors.password.message)}</p>}
-              </div>
+              <PasswordField form={f} name="password" label="Password (opsional)" />
             </div>
           </>
         )}
       />
 
+      {/* Edit Modal */}
       <CrudModal<EmployeeForm>
         open={!!editRow}
         onOpenChange={(v) => !v && setEditRow(null)}
@@ -329,8 +405,8 @@ export default function EmployeesPage() {
                 fullName: editRow.fullName,
                 positionId: editRow.positionId,
                 phone: editRow.phone ?? "",
-                username: undefined,
-                password: undefined,
+                username: editRow.username ?? "",
+                password: "",
               }
             : undefined
         }
@@ -349,7 +425,9 @@ export default function EmployeesPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Lengkap</label>
               <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
-              {f.formState.errors.fullName && <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>}
+              {f.formState.errors.fullName && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -358,12 +436,20 @@ export default function EmployeesPage() {
                 value={String(f.watch("positionId") ?? "")}
                 onValueChange={(v) => f.setValue("positionId", Number(v))}
               >
-                <SelectTrigger><SelectValue placeholder="Pilih jabatan" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jabatan" />
+                </SelectTrigger>
                 <SelectContent>
-                  {positions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {f.formState.errors.positionId && <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>}
+              {f.formState.errors.positionId && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -374,16 +460,18 @@ export default function EmployeesPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Username (opsional)</label>
-                <Input {...f.register("username")} placeholder="Username (isi bersama password untuk membuat akun)" />
+                <Input {...f.register("username")} placeholder="Username (kosongkan jika tidak diubah)" />
+                {f.formState.errors.username && (
+                  <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>
+                )}
               </div>
-              <div className="space-y-2">
-                <PasswordField form={f} name="password" label="Password (opsional)" placeholder="Password baru (Opsional)" />
-              </div>
+              <PasswordField form={f} name="password" label="Password (opsional)" placeholder="Biarkan kosong jika tidak diubah" />
             </div>
           </>
         )}
       />
 
+      {/* Ubah Password Modal */}
       <CrudModal<PasswordForm>
         open={!!pwdRow}
         onOpenChange={(v) => !v && setPwdRow(null)}
@@ -402,14 +490,12 @@ export default function EmployeesPage() {
           }
         }}
         renderFields={(f) => (
-          <div className="space-y-2">
-            <PasswordField form={f} name="password" label="Password Baru" placeholder="Minimal 6 karakter" />
-            {f.formState.errors.password && <p className="text-sm text-destructive">{String(f.formState.errors.password.message)}</p>}
-          </div>
+          <PasswordField form={f} name="password" label="Password Baru" placeholder="Minimal 6 karakter" />
         )}
         submitText="Simpan Password"
       />
 
+      {/* Delete Confirm */}
       <DeleteConfirm
         open={!!deleting}
         title="Yakin ingin menghapus?"

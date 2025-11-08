@@ -4,11 +4,21 @@ const EmployeeBaseSchema = z.object({
   fullName: z.string().min(1, "Nama wajib diisi"),
   phone: z.string().optional().or(z.literal("")).transform((v) => v || undefined),
   positionId: z.coerce.number().int().positive(),
-  username: z.string().min(3).optional().or(z.literal("")).transform((v) => v || undefined),
-  password: z.string().min(6).optional().or(z.literal("")).transform((v) => v || undefined),
+  username: z
+    .string()
+    .min(3, "Username minimal 3 karakter")
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => v || undefined),
+  password: z
+    .string()
+    .min(6, "Password minimal 6 karakter")
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => v || undefined),
 });
 
-const pairRefine = (d: z.infer<typeof EmployeeBaseSchema>, ctx: z.RefinementCtx) => {
+const pairRefineCreate = (d: z.infer<typeof EmployeeBaseSchema>, ctx: z.RefinementCtx) => {
   const bothEmpty = !d.username && !d.password;
   const bothFilled = !!d.username && !!d.password;
   if (!(bothEmpty || bothFilled)) {
@@ -20,13 +30,12 @@ const pairRefine = (d: z.infer<typeof EmployeeBaseSchema>, ctx: z.RefinementCtx)
   }
 };
 
-export const EmployeeCreateSchema = EmployeeBaseSchema.superRefine(pairRefine);
+export const EmployeeCreateSchema = EmployeeBaseSchema.superRefine(pairRefineCreate);
 
 export const EmployeeUpdateSchema = EmployeeBaseSchema
   .safeExtend({
     id: z.coerce.number().int().positive(),
-  })
-  .superRefine(pairRefine);
+  });
 
 export const EmployeePasswordChangeSchema = z.object({
   id: z.coerce.number().int().positive(),
