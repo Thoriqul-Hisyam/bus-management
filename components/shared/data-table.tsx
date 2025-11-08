@@ -18,6 +18,10 @@ export type DataTableColumn<T> = {
   sortable?: boolean;        // show sort affordance (handled by parent)
 };
 
+const HEADER_TEXT_COLOR = "#5C3B18";
+const HEADER_GRADIENT = "linear-gradient(90deg, rgba(181,122,54,0.15), rgba(92,59,24,0.15))";
+const ROW_HOVER_GRADIENT = "linear-gradient(90deg, rgba(181,122,54,0.05), rgba(92,59,24,0.05))";
+
 export function DataTable<T>({
   rows,
   columns,
@@ -40,21 +44,21 @@ export function DataTable<T>({
   const sortIcon = (col: DataTableColumn<T>) => {
     if (!col.sortable) return null;
     if (col.key !== sortKey) return <span className="text-xs opacity-50">↕</span>;
-    return (
-      <span className="text-xs">
-        {sortDir === "asc" ? "▲" : "▼"}
-      </span>
-    );
+    return <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>;
   };
 
   return (
-    <div className="rounded-2xl border bg-background">
+    <div className="rounded-2xl border bg-background overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow
+            style={{ backgroundImage: HEADER_GRADIENT }}
+            className="*[border-bottom-color:transparent]"
+          >
             {columns.map((col) => (
               <TableHead
                 key={col.key}
+                style={{ color: HEADER_TEXT_COLOR }}
                 className={col.className}
                 {...(col.sortable
                   ? {
@@ -72,6 +76,7 @@ export function DataTable<T>({
             ))}
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {isLoading ? (
             <TableRow>
@@ -87,7 +92,10 @@ export function DataTable<T>({
             </TableRow>
           ) : (
             rows.map((row, idx) => (
-              <TableRow key={startIndex + idx}>
+              <TableRow
+                key={startIndex + idx}
+                className="transition-colors hover:[background:linear-gradient(90deg,rgba(181,122,54,0.05),rgba(92,59,24,0.05))]"
+              >
                 {columns.map((col) => (
                   <TableCell key={col.key} className={col.className}>
                     {col.render ? col.render(row, startIndex + idx) : (row as any)[col.key]}
