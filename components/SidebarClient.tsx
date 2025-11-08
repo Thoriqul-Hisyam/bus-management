@@ -12,6 +12,7 @@ import {
   FaUserTie,
   FaUserFriends,
   FaFileInvoiceDollar,
+  FaClipboardList,
 } from "react-icons/fa";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -53,16 +54,16 @@ export default function Sidebar({ role }: { role: Role }) {
       </Link>
 
       <Link href="/trip_sheet" className={linkClass("/trip_sheet")}>
-        <FaFileInvoiceDollar /> Surat Jalan
+        <FaClipboardList /> Surat Jalan
       </Link>
 
       {canSeeFinance && (
         <>
           <Link href="/repayment" className={linkClass("/repayment")}>
-            <FaFileInvoiceDollar /> Tagihan Pembayaran
+            <FaMoneyBillWave /> Tagihan Pembayaran
           </Link>
           <Link href="/report/revenue" className={linkClass("/report/revenue")}>
-            <FaMoneyBillWave /> Report Revenue
+            <FaFileInvoiceDollar /> Laporan Pendapatan
           </Link>
         </>
       )}
@@ -132,7 +133,7 @@ export default function Sidebar({ role }: { role: Role }) {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-4 w-64 flex flex-col">
+          <SheetContent side="left" className="p-4 w-64 flex flex-col h-full">
             <div className="flex justify-center mb-6">
               <Image
                 src="/img/logo.png"
@@ -142,8 +143,10 @@ export default function Sidebar({ role }: { role: Role }) {
                 priority
               />
             </div>
-            {navLinks}
-            <div className="mt-auto text-sm text-gray-500 border-t pt-4 text-center">
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#B57A36] scrollbar-track-[#F5F5F5]">
+              {navLinks}
+            </div>
+            <div className="mt-4 text-sm text-gray-500 border-t pt-4 text-center">
               © 2025 Lefateach
             </div>
           </SheetContent>
@@ -161,8 +164,10 @@ export default function Sidebar({ role }: { role: Role }) {
             priority
           />
         </div>
-        {navLinks}
-        <div className="mt-auto text-sm text-gray-500 border-t pt-4 text-center md:text-left">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#B57A36] scrollbar-track-[#F5F5F5]">
+          {navLinks}
+        </div>
+        <div className="mt-4 text-sm text-gray-500 border-t pt-4 text-center md:text-left">
           © 2025 Lefateach
         </div>
       </aside>

@@ -26,7 +26,14 @@ export default async function Navbar() {
               {session.name} • {session.role.toUpperCase()}
             </span>
             <form action={logoutAction}>
-              <button className="px-3 py-1 rounded-md border hover:bg-gray-50">Logout</button>
+              <button
+                className="px-3 py-1 rounded-md text-white font-medium
+             bg-gradient-to-r from-[#B57A36] to-[#5C3B18] 
+             border border-transparent
+             hover:brightness-110 transition"
+              >
+                Logout
+              </button>
             </form>
           </>
         ) : (
