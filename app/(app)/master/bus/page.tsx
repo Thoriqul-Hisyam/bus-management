@@ -1,252 +1,475 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import Select from "react-select";
-import Swal from "sweetalert2";
-import "sweetalert2/dist/sweetalert2.min.css";
-import { listBus, createBus, updateBus, deleteBus, listBusTypes } from "@/actions/bus";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  listBus,
+  createBus,
+  updateBus,
+  deleteBus,
+  listBusTypes,
+} from "@/actions/bus";
 
-type Option = { value: number; label: string };
+import { z } from "zod";
+import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import Pagination from "@/components/shared/pagination";
+import { ActionDropdown } from "@/components/shared/action-dropdown";
+import { CrudModal } from "@/components/shared/crud-modal";
+import { DeleteConfirm } from "@/components/shared/delete-confirm";
 
-const selectStyle = {
-  control: (provided: any) => ({
-    ...provided,
-    minHeight: "44px",
-    borderColor: "#d1d5db",
-    borderRadius: "0.5rem",
-    boxShadow: "none",
-    "&:hover": { borderColor: "#3b82f6" },
-  }),
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select as ShSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type SortKey =
+  | "name_asc"
+  | "name_desc"
+  | "plate_asc"
+  | "plate_desc"
+  | "type_asc"
+  | "type_desc"
+  | "capacity_asc"
+  | "capacity_desc";
+
+type BusTypeOpt = { id: number; name: string };
+
+type Row = {
+  id: number;
+  name: string;
+  plateNo: string;
+  capacity: number;
+  busTypeId: number;
+  busType: { id: number; name: string } | null;
 };
 
+const FormSchema = z.object({
+  name: z.string().min(1, "Nama wajib diisi"),
+  plateNo: z.string().min(1, "Nomor polisi wajib diisi"),
+  busTypeId: z.coerce.number().int().positive("Jenis armada wajib dipilih"),
+  capacity: z.coerce.number().int().min(0, "Minimal 0"),
+});
+type FormValues = z.infer<typeof FormSchema>;
+
 export default function BusPage() {
-  const [buses, setBuses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("name_asc");
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [filterType, setFilterType] = useState<"all" | number>("all");
+
+  const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+  const [types, setTypes] = useState<BusTypeOpt[]>([]);
+
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [busTypeOptions, setBusTypeOptions] = useState<Option[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editRow, setEditRow] = useState<Row | null>(null);
+  const [deleting, setDeleting] = useState<Row | null>(null);
 
-  const [form, setForm] = useState({
-    id: null as number | null,
-    name: "",
-    plateNo: "",
-    busType: null as Option | null, // ← ganti dari enum ke option
-    capacity: "",
-  });
+  async function fetchData(opts?: {
+    q?: string;
+    sort?: SortKey;
+    page?: number;
+    perPage?: number;
+    busTypeId?: number | "all";
+  }) {
+    const _q = opts?.q ?? q;
+    const _sort = opts?.sort ?? sort;
+    const _page = opts?.page ?? page;
+    const _perPage = opts?.perPage ?? perPage;
+    const _busTypeId = opts?.busTypeId ?? filterType;
 
-  async function refresh() {
-    setLoading(true);
-    const res = await listBus();
-    if (res.ok) setBuses(res.data);
-    else Swal.fire({ icon: "error", title: "Error", text: res.error });
-    setLoading(false);
-  }
-
-  async function loadBusTypes() {
-    const res = await listBusTypes();
-    if (res.ok) {
-      setBusTypeOptions(res.data.map((r) => ({ value: r.id, label: r.name })));
-    } else {
-      Swal.fire({ icon: "error", title: "Error", text: res.error });
+    setIsLoading(true);
+    try {
+      const res = await listBus({
+        q: _q,
+        sort: _sort,
+        page: _page,
+        perPage: _perPage,
+        busTypeId: _busTypeId === "all" ? undefined : _busTypeId,
+      });
+      if (res.ok) {
+        setRows(res.data.rows as Row[]);
+        setTotal(res.data.total);
+      } else {
+        console.error(res.error);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    // load paralel
-    (async () => {
-      await Promise.all([loadBusTypes(), refresh()]);
-    })();
+    startTransition(async () => {
+      const t = await listBusTypes();
+      if (t.ok) setTypes(t.data);
+      await fetchData({ page: 1 });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSave = async () => {
-    if (!form.name || !form.plateNo || !form.busType) {
-      Swal.fire({
-        icon: "warning",
-        title: "Data belum lengkap",
-        text: "Nama, Nomor Polisi, dan Jenis Armada wajib diisi!",
-        confirmButtonColor: "#2563eb",
-      });
-      return;
-    }
+  useEffect(() => {
+    startTransition(() => void fetchData());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, page, perPage]);
 
-    startTransition(async () => {
-      const payload = {
-        id: form.id ?? undefined,
-        name: form.name,
-        plateNo: form.plateNo,
-        busTypeId: form.busType!.value, // ← kirim id
-        capacity: Number(form.capacity || 0),
-      };
+  useEffect(() => {
+    setPage(1);
+    startTransition(() => void fetchData({ page: 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterType]);
 
-      const res = form.id ? await updateBus(payload) : await createBus(payload);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      startTransition(() => void fetchData({ page: 1 }));
+    }, 450);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-      if (res.ok) {
-        Swal.fire({
-          icon: "success",
-          title: form.id ? "Data diperbarui" : "Data ditambahkan",
-          showConfirmButton: false,
-          timer: 1200,
-        });
-        setForm({ id: null, name: "", plateNo: "", busType: null, capacity: "" });
-        await refresh();
-      } else {
-        Swal.fire({ icon: "error", title: "Gagal", text: res.error });
-      }
-    });
-  };
+  const startIndex = (page - 1) * perPage;
 
-  const onDelete = (id: number) => {
-    Swal.fire({
-      title: "Yakin ingin menghapus data ini?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#dc2626",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Ya, hapus",
-      cancelButtonText: "Batal",
-    }).then((r) => {
-      if (!r.isConfirmed) return;
-      startTransition(async () => {
-        const res = await deleteBus(id);
-        if (res.ok) {
-          Swal.fire({
-            icon: "success",
-            title: "Data dihapus",
-            timer: 1000,
-            showConfirmButton: false,
-          });
-          await refresh();
-        } else {
-          Swal.fire({ icon: "error", title: "Gagal", text: res.error });
-        }
-      });
-    });
-  };
+  const columns: DataTableColumn<Row>[] = useMemo(
+    () => [
+      {
+        key: "no",
+        label: "No.",
+        className: "w-16 text-center",
+        render: (_r, i) => i + 1,
+      },
+      {
+        key: "name",
+        label: "Nama Armada",
+        sortable: true,
+        render: (r) => <span className="font-medium">{r.name}</span>,
+      },
+      {
+        key: "plateNo",
+        label: "No. Polisi",
+        sortable: true,
+        render: (r) => r.plateNo,
+      },
+      {
+        key: "busType",
+        label: "Jenis Armada",
+        sortable: true,
+        render: (r) => r.busType?.name ?? "—",
+      },
+      {
+        key: "capacity",
+        label: "Kapasitas",
+        sortable: true,
+        className: "w-24 text-right",
+        render: (r) => r.capacity,
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        className: "w-24 text-right",
+        render: (r) => {
+          const items = [
+            { key: "edit", label: "Edit" },
+            { key: "delete", label: "Hapus", destructive: true },
+          ] as const;
+          return (
+            <ActionDropdown
+              items={items as any}
+              onClickItem={(key) => {
+                if (key === "edit") setEditRow(r);
+                else if (key === "delete") setDeleting(r);
+              }}
+            />
+          );
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [page, perPage]
+  );
 
-  const editBus = (b: any) => {
-    // b sudah include busType
-    const opt = b.busType ? busTypeOptions.find((t) => t.value === b.busType.id) ?? null : null;
-    setForm({
-      id: b.id,
-      name: b.name,
-      plateNo: b.plateNo,
-      busType: opt,
-      capacity: String(b.capacity ?? ""),
-    });
-  };
+  const sortKey =
+    sort.startsWith("name")
+      ? "name"
+      : sort.startsWith("plate")
+      ? "plateNo"
+      : sort.startsWith("type")
+      ? "busType"
+      : sort.startsWith("capacity")
+      ? "capacity"
+      : undefined;
+  const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen text-gray-800">
-      <h1 className="text-2xl font-bold mb-8">Master Data Armada</h1>
+    <main className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Master Data Armada</h1>
 
-      <div className="grid lg:grid-cols-5 md:grid-cols-3 sm:grid-cols-2 gap-4 mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div>
-          <label className="text-sm text-gray-600">Nama Armada</label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full border rounded-lg p-2"
-            placeholder="Contoh: Bus Pariwisata 01"
+      {/* Toolbar */}
+      <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Cari nama / plat / tipe armada..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
           />
+          {q ? (
+            <Button variant="ghost" onClick={() => setQ("")}>
+              Reset
+            </Button>
+          ) : null}
         </div>
 
-        <div>
-          <label className="text-sm text-gray-600">No. Polisi</label>
-          <input
-            type="text"
-            value={form.plateNo}
-            onChange={(e) => setForm({ ...form, plateNo: e.target.value })}
-            className="w-full border rounded-lg p-2"
-            placeholder="Misal: B 1234 XYZ"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-600">Tipe Armada</label>
-          <Select
-            styles={selectStyle}
-            options={busTypeOptions}
-            value={form.busType}
-            onChange={(selected) => setForm({ ...form, busType: selected as Option | null })}
-            placeholder="Pilih jenis..."
-            isClearable
-          />
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-600">Kapasitas</label>
-          <input
-            type="number"
-            value={form.capacity}
-            onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-            className="w-full border rounded-lg p-2"
-            placeholder="Misal: 45"
-          />
-        </div>
-
-        <div className="flex items-end">
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg w-full"
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filter Tipe</span>
+          <ShSelect
+            value={String(filterType)}
+            onValueChange={(v) => {
+              const next: "all" | number = v === "all" ? "all" : Number(v);
+              setFilterType(next);
+            }}
           >
-            {form.id ? "Update" : "+ Tambah"}
-          </button>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Tipe</SelectItem>
+              {types.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </ShSelect>
+        </div>
+
+        <div className="flex items-center sm:justify-end">
+          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-blue-50 text-gray-700 uppercase text-xs font-semibold">
-            <tr>
-              <th className="p-3 text-left">Nama Armada</th>
-              <th className="p-3 text-left">No. Polisi</th>
-              <th className="p-3 text-left">Jenis Armada</th>
-              <th className="p-3 text-left">Kapasitas</th>
-              <th className="p-3 text-center w-24">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="text-center p-4 text-gray-500">
-                  Loading...
-                </td>
-              </tr>
-            ) : buses.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center p-4 text-gray-500 italic">
-                  Belum ada data
-                </td>
-              </tr>
-            ) : (
-              buses.map((b) => (
-                <tr key={b.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{b.name}</td>
-                  <td className="p-3">{b.plateNo}</td>
-                  <td className="p-3">{b.busType?.name ?? "-"}</td>
-                  <td className="p-3">{b.capacity}</td>
-                  <td className="p-3 text-center space-x-3">
-                    <button
-                      onClick={() => editBus(b)}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(b.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Table */}
+      <DataTable<Row>
+        rows={rows}
+        columns={columns}
+        isLoading={isLoading || isPending}
+        startIndex={startIndex}
+        sortKey={sortKey}
+        sortDir={sortDir as any}
+        onHeaderClick={(col) => {
+          if (col.key === "name") {
+            setPage(1);
+            setSort((p) => (p === "name_asc" ? "name_desc" : "name_asc"));
+          }
+          if (col.key === "plateNo") {
+            setPage(1);
+            setSort((p) => (p === "plate_asc" ? "plate_desc" : "plate_asc"));
+          }
+          if (col.key === "busType") {
+            setPage(1);
+            setSort((p) => (p === "type_asc" ? "type_desc" : "type_asc"));
+          }
+          if (col.key === "capacity") {
+            setPage(1);
+            setSort((p) => (p === "capacity_asc" ? "capacity_desc" : "capacity_asc"));
+          }
+        }}
+      />
+
+      {/* Pagination */}
+      <div className="mt-3">
+        <Pagination
+          page={page}
+          perPage={perPage}
+          total={total}
+          onPageChange={(p) => setPage(p)}
+          onPerPageChange={(pp) => {
+            setPage(1);
+            setPerPage(pp);
+          }}
+        />
       </div>
-    </div>
+
+      {/* Create Modal */}
+      <CrudModal<FormValues>
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Tambah Armada"
+        schema={FormSchema}
+        defaultValues={{
+          name: "",
+          plateNo: "",
+          busTypeId: types[0]?.id ?? ("" as unknown as number),
+          capacity: 0,
+        }}
+        onSubmit={async (values) => {
+          const res = await createBus(values);
+          if (res.ok) {
+            setCreateOpen(false);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Armada</label>
+              <Input {...f.register("name")} placeholder="Contoh: Bus Pariwisata 01" autoFocus />
+              {f.formState.errors.name && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">No. Polisi</label>
+              <Input {...f.register("plateNo")} placeholder="Misal: B 1234 XYZ" />
+              {f.formState.errors.plateNo && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.plateNo.message)}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipe Armada</label>
+              <ShSelect
+                value={String(f.watch("busTypeId") ?? "")}
+                onValueChange={(v) => f.setValue("busTypeId", Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih tipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {types.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </ShSelect>
+              {f.formState.errors.busTypeId && (
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.busTypeId.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kapasitas</label>
+              <Input type="number" {...f.register("capacity", { valueAsNumber: true })} placeholder="Misal: 45" />
+              {f.formState.errors.capacity && (
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.capacity.message)}
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      />
+
+      {/* Edit Modal */}
+      <CrudModal<FormValues>
+        open={!!editRow}
+        onOpenChange={(v) => !v && setEditRow(null)}
+        title="Ubah Armada"
+        schema={FormSchema}
+        defaultValues={
+          editRow
+            ? {
+                name: editRow.name,
+                plateNo: editRow.plateNo,
+                busTypeId: editRow.busTypeId,
+                capacity: editRow.capacity,
+              }
+            : undefined
+        }
+        onSubmit={async (values) => {
+          if (!editRow) return;
+          const res = await updateBus({ id: editRow.id, ...values });
+          if (res.ok) {
+            setEditRow(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+        renderFields={(f) => (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Armada</label>
+              <Input {...f.register("name")} placeholder="Contoh: Bus Pariwisata 01" autoFocus />
+              {f.formState.errors.name && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">No. Polisi</label>
+              <Input {...f.register("plateNo")} placeholder="Misal: B 1234 XYZ" />
+              {f.formState.errors.plateNo && (
+                <p className="text-sm text-destructive">{String(f.formState.errors.plateNo.message)}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipe Armada</label>
+              <ShSelect
+                value={String(f.watch("busTypeId") ?? "")}
+                onValueChange={(v) => f.setValue("busTypeId", Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih tipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {types.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </ShSelect>
+              {f.formState.errors.busTypeId && (
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.busTypeId.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kapasitas</label>
+              <Input type="number" {...f.register("capacity", { valueAsNumber: true })} placeholder="Misal: 45" />
+              {f.formState.errors.capacity && (
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.capacity.message)}
+                </p>
+              )}
+            </div>
+          </>
+        )}
+      />
+
+      {/* Delete Confirm */}
+      <DeleteConfirm
+        open={!!deleting}
+        title="Yakin ingin menghapus?"
+        description={`Data "${deleting?.name ?? ""}" akan dihapus permanen.`}
+        onOpenChange={(v) => !v && setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return;
+          const res = await deleteBus(deleting.id);
+          if (res.ok) {
+            setDeleting(null);
+            await fetchData();
+          } else {
+            throw new Error(res.error);
+          }
+        }}
+      />
+    </main>
   );
 }
