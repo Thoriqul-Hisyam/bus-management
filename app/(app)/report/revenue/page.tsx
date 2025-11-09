@@ -1,38 +1,35 @@
 "use client";
 
-import { useEffect, useState, useMemo, useTransition } from "react";
-import Swal from "sweetalert2";
-import { listSchedules, updateStatusSchedule } from "@/actions/schedule";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { listSchedules } from "@/actions/schedule";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 type SortKey =
-  | "customer_asc"
-  | "customer_desc"
   | "bus_asc"
   | "bus_desc"
+  | "customer_asc"
+  | "customer_desc"
   | "date_asc"
   | "date_desc"
-  | "dp_asc"
-  | "dp_desc"
-  | "price_asc"
-  | "price_desc";
+  | "revenue_asc"
+  | "revenue_desc";
 
 type Row = {
   id: number;
-  customer: string;
   bus: string;
-  paidAt: string;
-  amount: number;
-  priceTotal: number;
+  customer: string;
+  date: string;
+  totalRevenue: number;
+  trips: number;
 };
 
-export default function ScheduleInputPage() {
+export default function ReportRevenuePage() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("date_desc");
   const [page, setPage] = useState(1);
@@ -40,8 +37,13 @@ export default function ScheduleInputPage() {
 
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+
   const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [busFilter, setBusFilter] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
   // 🔹 Fetch data
   async function fetchData(opts?: { page?: number }) {
@@ -50,41 +52,50 @@ export default function ScheduleInputPage() {
     try {
       const res = await listSchedules();
       if (res.ok) {
-        let data: Row[] = res.data
-          .filter((s: any) => s.status === "CONFIRMED")
-          .map((s: any) => ({
-            id: s.id,
-            customer: s.customer,
-            bus: s.bus,
-            paidAt: s.paidAt,
-            amount: s.amount,
-            priceTotal: s.priceTotal,
-          }));
+        let data: Row[] = res.data.map((r) => ({
+          id: r.id,
+          bus: r.bus,
+          customer: r.customer,
+          date: r.rentStartAt,
+          totalRevenue: r.priceTotal,
+          trips: 1,
+        }));
 
-        // Filter search
+        // Filter bus
+        if (busFilter) data = data.filter((r) => r.bus.includes(busFilter));
+
+        // Filter tanggal
+        if (dateFrom && dateTo) {
+          const from = new Date(dateFrom);
+          const to = new Date(dateTo);
+          data = data.filter((r) => {
+            const d = new Date(r.date);
+            return d >= from && d <= to;
+          });
+        }
+
+        // Search query
         if (q) {
           const qLower = q.toLowerCase();
           data = data.filter(
             (r) =>
-              r.customer.toLowerCase().includes(qLower) ||
-              r.bus.toLowerCase().includes(qLower)
+              r.bus.toLowerCase().includes(qLower) ||
+              r.customer.toLowerCase().includes(qLower)
           );
         }
 
         // Sorting
         const sorted = [...data].sort((a, b) => {
           const dir = sort.endsWith("_asc") ? 1 : -1;
+          if (sort.startsWith("bus")) return a.bus.localeCompare(b.bus) * dir;
           if (sort.startsWith("customer"))
             return a.customer.localeCompare(b.customer) * dir;
-          if (sort.startsWith("bus")) return a.bus.localeCompare(b.bus) * dir;
           if (sort.startsWith("date"))
             return (
-              (new Date(a.paidAt).getTime() - new Date(b.paidAt).getTime()) *
-              dir
+              (new Date(a.date).getTime() - new Date(b.date).getTime()) * dir
             );
-          if (sort.startsWith("dp")) return (a.amount - b.amount) * dir;
-          if (sort.startsWith("price"))
-            return (a.priceTotal - b.priceTotal) * dir;
+          if (sort.startsWith("revenue"))
+            return (a.totalRevenue - b.totalRevenue) * dir;
           return 0;
         });
 
@@ -98,29 +109,9 @@ export default function ScheduleInputPage() {
 
   useEffect(() => {
     startTransition(() => void fetchData({ page: 1 }));
-  }, [q, sort, perPage]);
+  }, [q, busFilter, dateFrom, dateTo, sort, perPage]);
 
   const startIndex = (page - 1) * perPage;
-
-  const handleMarkLunas = async (schedule: Row) => {
-    const confirm = await Swal.fire({
-      title: `Tandai booking ${schedule.customer} sebagai LUNAS?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Ya, LUNAS",
-      cancelButtonText: "Batal",
-    });
-
-    if (confirm.isConfirmed) {
-      const res = await updateStatusSchedule(schedule.id, "COMPLETED");
-      if (res.ok) {
-        Swal.fire("Berhasil!", "Status booking sudah LUNAS.", "success");
-        fetchData();
-      } else {
-        Swal.fire("Gagal!", res.error, "error");
-      }
-    }
-  };
 
   const columns: DataTableColumn<Row>[] = useMemo(
     () => [
@@ -130,63 +121,62 @@ export default function ScheduleInputPage() {
         className: "w-16 text-center",
         render: (_r, i) => i + 1 + startIndex,
       },
+      { key: "bus", label: "Armada", sortable: true, render: (r) => r.bus },
       {
         key: "customer",
         label: "Customer",
         sortable: true,
         render: (r) => r.customer,
       },
-      { key: "bus", label: "Armada", sortable: true, render: (r) => r.bus },
       {
-        key: "paidAt",
-        label: "Tanggal DP",
+        key: "date",
+        label: "Tanggal",
         sortable: true,
-        render: (r) => new Date(r.paidAt).toLocaleDateString("id-ID"),
+        render: (r) => new Date(r.date).toLocaleDateString("id-ID"),
       },
       {
-        key: "amount",
-        label: "DP",
-        sortable: true,
-        className: "text-right",
-        render: (r) => `Rp ${r.amount.toLocaleString()}`,
-      },
-      {
-        key: "priceTotal",
-        label: "Price",
+        key: "revenue",
+        label: "Total Pendapatan",
         sortable: true,
         className: "text-right",
-        render: (r) => `Rp ${r.priceTotal.toLocaleString()}`,
-      },
-      {
-        key: "actions",
-        label: "Aksi",
-        className: "text-center",
-        render: (r) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleMarkLunas(r)}
-          >
-            Lunas
-          </Button>
-        ),
+        render: (r) => `Rp ${r.totalRevenue.toLocaleString("id-ID")}`,
       },
     ],
     [startIndex]
   );
 
+  const totalRevenue = rows.reduce((sum, r) => sum + r.totalRevenue, 0);
+
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Tagihan Pembayaran</h1>
+      <h1 className="text-2xl font-semibold mb-4">Laporan Pendapatan</h1>
 
-      <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Toolbar */}
+      <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <Input
-          placeholder="Cari customer / armada..."
+          placeholder="Cari armada / Customer..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
+        <Input
+          type="text"
+          placeholder="Filter Armada..."
+          value={busFilter}
+          onChange={(e) => setBusFilter(e.target.value)}
+        />
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+        />
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+        />
       </div>
 
+      {/* Table */}
       <DataTable<Row>
         rows={rows}
         columns={columns}
@@ -205,6 +195,7 @@ export default function ScheduleInputPage() {
         }}
       />
 
+      {/* Pagination */}
       <div className="mt-3">
         <Pagination
           page={page}
@@ -216,6 +207,10 @@ export default function ScheduleInputPage() {
             setPerPage(pp);
           }}
         />
+      </div>
+
+      <div className="mt-3 font-semibold text-right text-green-600">
+        Total Pendapatan: Rp {totalRevenue.toLocaleString("id-ID")}
       </div>
     </main>
   );
