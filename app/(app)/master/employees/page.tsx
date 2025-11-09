@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { listEmployees, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeAccountStatus, changeEmployeePassword } from "@/actions/employee";
+import {
+  listEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+  toggleEmployeeAccountStatus,
+  changeEmployeePassword,
+} from "@/actions/employee";
 import { listAllPositions } from "@/actions/position";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
@@ -11,21 +18,10 @@ import { DeleteConfirm } from "@/components/shared/delete-confirm";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import PasswordField from "@/components/shared/password-field";
+import RSelect, { type Option } from "@/components/shared/rselect";
 
-type SortKey =
-  | "name_asc"
-  | "name_desc"
-  | "position_asc"
-  | "position_desc";
-
+type SortKey = "name_asc" | "name_desc" | "position_asc" | "position_desc";
 type StatusFilter = "all" | "active" | "inactive";
 
 type Position = { id: number; name: string };
@@ -39,20 +35,21 @@ type EmployeeRow = {
   isActive?: boolean | null;
 };
 
-const EmployeeFormSchema = z.object({
-  fullName: z.string().min(1, "Nama wajib diisi"),
-  positionId: z.coerce.number().int().positive({ message: "Jabatan wajib dipilih" }),
-  phone: z.string().optional(),
-  username: z.string().min(3, "Min 3 karakter").optional(),
-  password: z.string().min(6, "Min 6 karakter").optional(),
-}).refine(
-  (data) =>
-    (!!data.username && !!data.password) || (!data.username && !data.password),
-  {
-    message: "Isi username dan password bersamaan untuk membuat/mengubah akun.",
-    path: ["username"],
-  }
-);
+const EmployeeFormSchema = z
+  .object({
+    fullName: z.string().min(1, "Nama wajib diisi"),
+    positionId: z.coerce.number().int().positive({ message: "Jabatan wajib dipilih" }),
+    phone: z.string().optional(),
+    username: z.string().min(3, "Min 3 karakter").optional(),
+    password: z.string().min(6, "Min 6 karakter").optional(),
+  })
+  .refine(
+    (data) => (!!data.username && !!data.password) || (!data.username && !data.password),
+    {
+      message: "Isi username dan password bersamaan untuk membuat/mengubah akun.",
+      path: ["username"],
+    }
+  );
 type EmployeeForm = z.infer<typeof EmployeeFormSchema>;
 
 const PasswordSchema = z.object({
@@ -81,6 +78,20 @@ export default function EmployeesPage() {
   const [editRow, setEditRow] = useState<EmployeeRow | null>(null);
   const [deleting, setDeleting] = useState<EmployeeRow | null>(null);
   const [pwdRow, setPwdRow] = useState<EmployeeRow | null>(null);
+
+  const positionOptions: Option[] = useMemo(
+    () => positions.map((p) => ({ value: p.id, label: p.name })),
+    [positions]
+  );
+
+  const statusOptions: Option[] = useMemo(
+    () => [
+      { value: "all", label: "Semua" },
+      { value: "active", label: "Aktif" },
+      { value: "inactive", label: "Nonaktif" },
+    ],
+    []
+  );
 
   async function fetchData(opts?: {
     q?: string;
@@ -129,7 +140,6 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort, page, perPage, status]);
 
-  // debounce search
   useEffect(() => {
     const t = setTimeout(() => {
       setPage(1);
@@ -139,7 +149,6 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
-  // columns
   const startIndex = (page - 1) * perPage;
   const columns: DataTableColumn<EmployeeRow>[] = useMemo(
     () => [
@@ -176,19 +185,19 @@ export default function EmployeesPage() {
         label: "Status Akun",
         className: "w-36",
         render: (r) =>
-          r.username
-            ? (
-                <span
-                  className={
-                    r.isActive
-                      ? "inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700"
-                      : "inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700"
-                  }
-                >
-                  {r.isActive ? "Aktif" : "Nonaktif"}
-                </span>
-              )
-            : <span className="text-xs text-muted-foreground">—</span>,
+          r.username ? (
+            <span
+              className={
+                r.isActive
+                  ? "inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700"
+                  : "inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-700"
+              }
+            >
+              {r.isActive ? "Aktif" : "Nonaktif"}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          ),
       },
       {
         key: "actions",
@@ -237,9 +246,7 @@ export default function EmployeesPage() {
   );
 
   const sortKey =
-    sort.startsWith("name") ? "fullName" :
-    sort.startsWith("position") ? "position" :
-    undefined;
+    sort.startsWith("name") ? "fullName" : sort.startsWith("position") ? "position" : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
@@ -264,22 +271,19 @@ export default function EmployeesPage() {
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Status Akun</span>
-          <Select
-            value={status}
-            onValueChange={(v: StatusFilter) => {
-              setPage(1);
-              setStatus(v);
-            }}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua</SelectItem>
-              <SelectItem value="active">Aktif</SelectItem>
-              <SelectItem value="inactive">Nonaktif</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="min-w-48 w-48">
+            <RSelect
+              instanceId="status-filter"
+              options={statusOptions}
+              value={status}
+              onChange={(v) => {
+                const val = (v as StatusFilter) ?? "all";
+                setPage(1);
+                setStatus(val);
+              }}
+              isClearable={false}
+            />
+          </div>
         </div>
 
         <div className="flex items-center sm:justify-end">
@@ -314,7 +318,10 @@ export default function EmployeesPage() {
           perPage={perPage}
           total={total}
           onPageChange={(p) => setPage(p)}
-          onPerPageChange={(pp) => { setPage(1); setPerPage(pp); }}
+          onPerPageChange={(pp) => {
+            setPage(1);
+            setPerPage(pp);
+          }}
         />
       </div>
 
@@ -347,29 +354,25 @@ export default function EmployeesPage() {
               <label className="text-sm font-medium">Nama Lengkap</label>
               <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
               {f.formState.errors.fullName && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.fullName.message)}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Jabatan</label>
-              <Select
-                value={String(f.watch("positionId") ?? "")}
-                onValueChange={(v) => f.setValue("positionId", Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jabatan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {positions.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <RSelect
+                instanceId="position-create"
+                options={positionOptions}
+                value={f.watch("positionId") ?? null}
+                onChange={(v) => f.setValue("positionId", Number(v))}
+                isClearable={false}
+              />
               {f.formState.errors.positionId && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.positionId.message)}
+                </p>
               )}
             </div>
 
@@ -383,7 +386,9 @@ export default function EmployeesPage() {
                 <label className="text-sm font-medium">Username (opsional)</label>
                 <Input {...f.register("username")} placeholder="Username" />
                 {f.formState.errors.username && (
-                  <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>
+                  <p className="text-sm text-destructive">
+                    {String(f.formState.errors.username.message)}
+                  </p>
                 )}
               </div>
               <PasswordField form={f} name="password" label="Password (opsional)" />
@@ -426,29 +431,25 @@ export default function EmployeesPage() {
               <label className="text-sm font-medium">Nama Lengkap</label>
               <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
               {f.formState.errors.fullName && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.fullName.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.fullName.message)}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Jabatan</label>
-              <Select
-                value={String(f.watch("positionId") ?? "")}
-                onValueChange={(v) => f.setValue("positionId", Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jabatan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {positions.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <RSelect
+                instanceId="position-edit"
+                options={positionOptions}
+                value={f.watch("positionId") ?? null}
+                onChange={(v) => f.setValue("positionId", Number(v))}
+                isClearable={false}
+              />
               {f.formState.errors.positionId && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.positionId.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.positionId.message)}
+                </p>
               )}
             </div>
 
@@ -460,12 +461,22 @@ export default function EmployeesPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Username (opsional)</label>
-                <Input {...f.register("username")} placeholder="Username (kosongkan jika tidak diubah)" />
+                <Input
+                  {...f.register("username")}
+                  placeholder="Username (kosongkan jika tidak diubah)"
+                />
                 {f.formState.errors.username && (
-                  <p className="text-sm text-destructive">{String(f.formState.errors.username.message)}</p>
+                  <p className="text-sm text-destructive">
+                    {String(f.formState.errors.username.message)}
+                  </p>
                 )}
               </div>
-              <PasswordField form={f} name="password" label="Password (opsional)" placeholder="Biarkan kosong jika tidak diubah" />
+              <PasswordField
+                form={f}
+                name="password"
+                label="Password (opsional)"
+                placeholder="Biarkan kosong jika tidak diubah"
+              />
             </div>
           </>
         )}
@@ -490,7 +501,12 @@ export default function EmployeesPage() {
           }
         }}
         renderFields={(f) => (
-          <PasswordField form={f} name="password" label="Password Baru" placeholder="Minimal 6 karakter" />
+          <PasswordField
+            form={f}
+            name="password"
+            label="Password Baru"
+            placeholder="Minimal 6 karakter"
+          />
         )}
         submitText="Simpan Password"
       />

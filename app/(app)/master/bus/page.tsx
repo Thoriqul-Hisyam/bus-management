@@ -18,13 +18,9 @@ import { DeleteConfirm } from "@/components/shared/delete-confirm";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select as ShSelect,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+import RSelect, { type Option as ROption } from "@/components/shared/rselect";
+import { Controller } from "react-hook-form";
 
 type SortKey =
   | "name_asc"
@@ -72,6 +68,11 @@ export default function BusPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
+
+  const typeOptions: ROption[] = useMemo(
+    () => types.map((t) => ({ value: t.id, label: t.name })),
+    [types]
+  );
 
   async function fetchData(opts?: {
     q?: string;
@@ -159,7 +160,7 @@ export default function BusPage() {
       },
       {
         key: "busType",
-        label: "Tipe armada",
+        label: "Jenis Armada",
         sortable: true,
         render: (r) => r.busType?.name ?? "—",
       },
@@ -226,27 +227,19 @@ export default function BusPage() {
           ) : null}
         </div>
 
+        {/* Filter Tipe Armada pakai react-select */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Filter Tipe</span>
-          <ShSelect
-            value={String(filterType)}
-            onValueChange={(v) => {
-              const next: "all" | number = v === "all" ? "all" : Number(v);
-              setFilterType(next);
-            }}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Tipe</SelectItem>
-              {types.map((t) => (
-                <SelectItem key={t.id} value={String(t.id)}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </ShSelect>
+          <div className="min-w-48 w-48">
+            <RSelect
+              options={[{ value: "all", label: "Semua Tipe" }, ...typeOptions]}
+              value={filterType}
+              onChange={(v) =>
+                setFilterType(v === "all" || v === null ? "all" : Number(v))
+              }
+              // searchable & clearable sudah default true di RSelect
+            />
+          </div>
         </div>
 
         <div className="flex items-center sm:justify-end">
@@ -305,7 +298,7 @@ export default function BusPage() {
         defaultValues={{
           name: "",
           plateNo: "",
-          busTypeId: types[0]?.id ?? ("" as unknown as number),
+          busTypeId: typeOptions[0]?.value as number | undefined,
           capacity: 0,
         }}
         onSubmit={async (values) => {
@@ -337,21 +330,18 @@ export default function BusPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Tipe Armada</label>
-              <ShSelect
-                value={String(f.watch("busTypeId") ?? "")}
-                onValueChange={(v) => f.setValue("busTypeId", Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih tipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.id} value={String(t.id)}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </ShSelect>
+              <Controller
+                name="busTypeId"
+                control={f.control}
+                render={({ field }) => (
+                  <RSelect
+                    options={typeOptions}
+                    value={field.value as number | undefined}
+                    onChange={(v) => field.onChange(v == null ? undefined : Number(v))}
+                    placeholder="Pilih tipe"
+                  />
+                )}
+              />
               {f.formState.errors.busTypeId && (
                 <p className="text-sm text-destructive">
                   {String(f.formState.errors.busTypeId.message)}
@@ -418,21 +408,18 @@ export default function BusPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Tipe Armada</label>
-              <ShSelect
-                value={String(f.watch("busTypeId") ?? "")}
-                onValueChange={(v) => f.setValue("busTypeId", Number(v))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih tipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.id} value={String(t.id)}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </ShSelect>
+              <Controller
+                name="busTypeId"
+                control={f.control}
+                render={({ field }) => (
+                  <RSelect
+                    options={typeOptions}
+                    value={field.value as number | undefined}
+                    onChange={(v) => field.onChange(v == null ? undefined : Number(v))}
+                    placeholder="Pilih tipe"
+                  />
+                )}
+              />
               {f.formState.errors.busTypeId && (
                 <p className="text-sm text-destructive">
                   {String(f.formState.errors.busTypeId.message)}
