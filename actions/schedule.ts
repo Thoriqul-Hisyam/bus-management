@@ -271,6 +271,146 @@ export async function listSchedulesTripSheet(): Promise<Result<any[]>> {
   }
 }
 
+export type TripSheetSort =
+  | "customer_asc" | "customer_desc"
+  | "bus_asc" | "bus_desc"
+  | "pickup_asc" | "pickup_desc"
+  | "destination_asc" | "destination_desc"
+  | "price_asc" | "price_desc"
+  | "start_asc" | "start_desc"
+  | "end_asc" | "end_desc";
+
+export async function listTripSheets(input?: {
+  q?: string;
+  page?: number;
+  perPage?: number;
+  sort?: TripSheetSort;
+  busId?: number;
+  start?: string | null; // YYYY-MM-DD
+  end?: string | null;   // YYYY-MM-DD
+}): Promise<Result<{
+  rows: Array<{
+    id: number;
+    status: BookingStatus;
+    customer: string | null;
+    bus: string | null;
+    plateNo: string | null;
+    pickupAddress: string | null;
+    destination: string | null;
+    priceTotal: number;
+    rentStartAt: string | null;
+    rentEndAt: string | null;
+    driver: string | null;
+    coDriver: string | null;
+    tripId: number | null;
+    // trip sheet money fields (opsional di print)
+    sangu: number | null;
+    premiDriver: number | null;
+    premiCoDriver: number | null;
+    umDriver: number | null;
+    umCoDriver: number | null;
+    bbm: number | null;
+    total: number | null;
+    description: string | null;
+  }>;
+  total: number;
+}>> {
+  try {
+    const q = input?.q?.trim() ?? "";
+    const page = Math.max(Number(input?.page ?? 1), 1);
+    const perPage = Math.min(Math.max(Number(input?.perPage ?? 10), 1), 100);
+    const sort = (input?.sort ?? "start_desc") as TripSheetSort;
+    const busId = typeof input?.busId === "number" && Number.isFinite(input.busId) ? input.busId : undefined;
+
+    // Rentang tanggal
+    const startDate = input?.start ? new Date(input.start) : undefined;
+    const endDate = input?.end ? new Date(input.end) : undefined;
+    if (startDate) startDate.setHours(0, 0, 0, 0);
+    if (endDate) endDate.setHours(23, 59, 59, 999);
+
+    // WHERE
+    const where: Prisma.BookingWhereInput = {
+      AND: [
+        { status: BookingStatus.COMPLETED },
+        busId ? { busId } : {},
+        startDate ? { rentStartAt: { gte: startDate } } : {},
+        endDate ? { rentEndAt: { lte: endDate } } : {},
+        q
+          ? {
+              OR: [
+                { pickupAddress: { contains: q } },
+                { destination: { contains: q } },
+                { customer: { name: { contains: q } } },
+                { bus: { name: { contains: q } } },
+                { bus: { plateNo: { contains: q } } },
+                { driver: { fullName: { contains: q } } },
+                { coDriver: { fullName: { contains: q } } },
+              ],
+            }
+          : {},
+      ],
+    };
+
+    // ORDER BY
+    const [key, dir] = sort.split("_") as [string, "asc" | "desc"];
+    const orderBy: Prisma.BookingOrderByWithRelationInput =
+      key === "customer" ? { customer: { name: dir } } :
+      key === "bus" ? { bus: { name: dir } } :
+      key === "pickup" ? { pickupAddress: dir } :
+      key === "destination" ? { destination: dir } :
+      key === "price" ? { priceTotal: dir } :
+      key === "start" ? { rentStartAt: dir } :
+      { rentEndAt: dir };
+
+    const [rows, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        include: {
+          customer: true,
+          bus: true,
+          driver: true,
+          coDriver: true,
+          sales: true,
+          tripSheets: true,
+        },
+        orderBy,
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      prisma.booking.count({ where }),
+    ]);
+
+    const shaped = rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      customer: r.customer?.name ?? null,
+      bus: r.bus?.name ?? null,
+      plateNo: r.bus?.plateNo ?? null,
+      pickupAddress: r.pickupAddress ?? null,
+      destination: r.destination ?? null,
+      priceTotal: r.priceTotal != null ? Number(r.priceTotal) : 0,
+      rentStartAt: r.rentStartAt ? r.rentStartAt.toISOString() : null,
+      rentEndAt: r.rentEndAt ? r.rentEndAt.toISOString() : null,
+      driver: r.driver?.fullName ?? null,
+      coDriver: r.coDriver?.fullName ?? null,
+      tripId: r.tripSheets?.[0]?.id ?? null,
+      // trip sheet money fields
+      sangu: r.tripSheets?.[0]?.sangu != null ? Number(r.tripSheets[0].sangu) : null,
+      premiDriver: r.tripSheets?.[0]?.premiDriver != null ? Number(r.tripSheets[0].premiDriver) : null,
+      premiCoDriver: r.tripSheets?.[0]?.premiCoDriver != null ? Number(r.tripSheets[0].premiCoDriver) : null,
+      umDriver: r.tripSheets?.[0]?.umDriver != null ? Number(r.tripSheets[0].umDriver) : null,
+      umCoDriver: r.tripSheets?.[0]?.umCoDriver != null ? Number(r.tripSheets[0].umCoDriver) : null,
+      bbm: r.tripSheets?.[0]?.bbm != null ? Number(r.tripSheets[0].bbm) : null,
+      total: r.tripSheets?.[0]?.total != null ? Number(r.tripSheets[0].total) : null,
+      description: r.tripSheets?.[0]?.description ?? null,
+    }));
+
+    return ok({ rows: shaped, total });
+  } catch (e: any) {
+    return err(e.message ?? "Gagal mengambil data Surat Jalan");
+  }
+}
+
 export async function getScheduleById(id: number): Promise<Result<any>> {
   try {
     const r = await prisma.booking.findUnique({
