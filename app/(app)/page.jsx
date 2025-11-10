@@ -6,7 +6,7 @@ import { format, parse, startOfWeek, getDay } from "date-fns";
 import { id } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import Swal from "sweetalert2";
-import { listSchedules } from "@/actions/schedule";
+import { listAllSchedules } from "@/actions/schedule";
 
 import {
   Card,
@@ -57,7 +57,7 @@ export default function ScheduleCheckPage() {
   async function refreshSchedules() {
     try {
       setLoading(true);
-      const res = await listSchedules();
+      const res = await listAllSchedules();
       if (res.ok) {
         setScheduleList(res.data);
       } else {
