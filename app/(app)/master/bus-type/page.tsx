@@ -2,9 +2,17 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { z } from "zod";
-import { listBusTypes, createBusType, updateBusType, deleteBusType } from "@/actions/bus-type";
+import {
+  listBusTypes,
+  createBusType,
+  updateBusType,
+  deleteBusType,
+} from "@/actions/bus-type";
 
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import { CrudModal } from "@/components/shared/crud-modal";
 import { DeleteConfirm } from "@/components/shared/delete-confirm";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
@@ -106,7 +114,7 @@ export default function BusTypePage() {
       },
       {
         key: "actions",
-        label: "Actions",
+        label: "Aksi",
         className: "w-24 text-right",
         render: (r) => {
           const items = [
@@ -206,9 +214,15 @@ export default function BusTypePage() {
         renderFields={(f) => (
           <div className="space-y-2">
             <label className="text-sm font-medium">Nama</label>
-            <Input {...f.register("name")} placeholder="Misal: EKONOMI / VIP / EKSEKUTIF" autoFocus />
+            <Input
+              {...f.register("name")}
+              placeholder="Misal: EKONOMI / VIP / EKSEKUTIF"
+              autoFocus
+            />
             {f.formState.errors.name && (
-              <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+              <p className="text-sm text-destructive">
+                {String(f.formState.errors.name.message)}
+              </p>
             )}
           </div>
         )}
@@ -233,9 +247,15 @@ export default function BusTypePage() {
         renderFields={(f) => (
           <div className="space-y-2">
             <label className="text-sm font-medium">Nama</label>
-            <Input {...f.register("name")} placeholder="Misal: EKONOMI / VIP / EKSEKUTIF" autoFocus />
+            <Input
+              {...f.register("name")}
+              placeholder="Misal: EKONOMI / VIP / EKSEKUTIF"
+              autoFocus
+            />
             {f.formState.errors.name && (
-              <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+              <p className="text-sm text-destructive">
+                {String(f.formState.errors.name.message)}
+              </p>
             )}
           </div>
         )}

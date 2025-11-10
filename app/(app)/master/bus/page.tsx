@@ -10,7 +10,10 @@ import {
 } from "@/actions/bus";
 
 import { z } from "zod";
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
 import { CrudModal } from "@/components/shared/crud-modal";
@@ -173,7 +176,7 @@ export default function BusPage() {
       },
       {
         key: "actions",
-        label: "Actions",
+        label: "Aksi",
         className: "w-24 text-right",
         render: (r) => {
           const items = [
@@ -196,16 +199,15 @@ export default function BusPage() {
     [page, perPage]
   );
 
-  const sortKey =
-    sort.startsWith("name")
-      ? "name"
-      : sort.startsWith("plate")
-      ? "plateNo"
-      : sort.startsWith("type")
-      ? "busType"
-      : sort.startsWith("capacity")
-      ? "capacity"
-      : undefined;
+  const sortKey = sort.startsWith("name")
+    ? "name"
+    : sort.startsWith("plate")
+    ? "plateNo"
+    : sort.startsWith("type")
+    ? "busType"
+    : sort.startsWith("capacity")
+    ? "capacity"
+    : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
@@ -270,7 +272,9 @@ export default function BusPage() {
           }
           if (col.key === "capacity") {
             setPage(1);
-            setSort((p) => (p === "capacity_asc" ? "capacity_desc" : "capacity_asc"));
+            setSort((p) =>
+              p === "capacity_asc" ? "capacity_desc" : "capacity_asc"
+            );
           }
         }}
       />
@@ -314,17 +318,28 @@ export default function BusPage() {
           <>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Armada</label>
-              <Input {...f.register("name")} placeholder="Contoh: Bus Pariwisata 01" autoFocus />
+              <Input
+                {...f.register("name")}
+                placeholder="Contoh: Bus Pariwisata 01"
+                autoFocus
+              />
               {f.formState.errors.name && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.name.message)}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">No. Polisi</label>
-              <Input {...f.register("plateNo")} placeholder="Misal: B 1234 XYZ" />
+              <Input
+                {...f.register("plateNo")}
+                placeholder="Misal: B 1234 XYZ"
+              />
               {f.formState.errors.plateNo && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.plateNo.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.plateNo.message)}
+                </p>
               )}
             </div>
 
@@ -337,7 +352,9 @@ export default function BusPage() {
                   <RSelect
                     options={typeOptions}
                     value={field.value as number | undefined}
-                    onChange={(v) => field.onChange(v == null ? undefined : Number(v))}
+                    onChange={(v) =>
+                      field.onChange(v == null ? undefined : Number(v))
+                    }
                     placeholder="Pilih tipe"
                   />
                 )}
@@ -351,7 +368,11 @@ export default function BusPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Kapasitas</label>
-              <Input type="number" {...f.register("capacity", { valueAsNumber: true })} placeholder="Misal: 45" />
+              <Input
+                type="number"
+                {...f.register("capacity", { valueAsNumber: true })}
+                placeholder="Misal: 45"
+              />
               {f.formState.errors.capacity && (
                 <p className="text-sm text-destructive">
                   {String(f.formState.errors.capacity.message)}
@@ -392,17 +413,28 @@ export default function BusPage() {
           <>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Armada</label>
-              <Input {...f.register("name")} placeholder="Contoh: Bus Pariwisata 01" autoFocus />
+              <Input
+                {...f.register("name")}
+                placeholder="Contoh: Bus Pariwisata 01"
+                autoFocus
+              />
               {f.formState.errors.name && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.name.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.name.message)}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">No. Polisi</label>
-              <Input {...f.register("plateNo")} placeholder="Misal: B 1234 XYZ" />
+              <Input
+                {...f.register("plateNo")}
+                placeholder="Misal: B 1234 XYZ"
+              />
               {f.formState.errors.plateNo && (
-                <p className="text-sm text-destructive">{String(f.formState.errors.plateNo.message)}</p>
+                <p className="text-sm text-destructive">
+                  {String(f.formState.errors.plateNo.message)}
+                </p>
               )}
             </div>
 
@@ -415,7 +447,9 @@ export default function BusPage() {
                   <RSelect
                     options={typeOptions}
                     value={field.value as number | undefined}
-                    onChange={(v) => field.onChange(v == null ? undefined : Number(v))}
+                    onChange={(v) =>
+                      field.onChange(v == null ? undefined : Number(v))
+                    }
                     placeholder="Pilih tipe"
                   />
                 )}
@@ -429,7 +463,11 @@ export default function BusPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Kapasitas</label>
-              <Input type="number" {...f.register("capacity", { valueAsNumber: true })} placeholder="Misal: 45" />
+              <Input
+                type="number"
+                {...f.register("capacity", { valueAsNumber: true })}
+                placeholder="Misal: 45"
+              />
               {f.formState.errors.capacity && (
                 <p className="text-sm text-destructive">
                   {String(f.formState.errors.capacity.message)}
