@@ -50,7 +50,7 @@ export default function ScheduleInputPage() {
     try {
       const res = await listSchedules();
       if (res.ok) {
-        let data: Row[] = res.data
+        let data: Row[] = res.data.rows
           .filter((s: any) => s.status === "CONFIRMED")
           .map((s: any) => ({
             id: s.id,
