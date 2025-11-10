@@ -52,7 +52,7 @@ export default function ReportRevenuePage() {
     try {
       const res = await listSchedules();
       if (res.ok) {
-        let data: Row[] = res.data.map((r) => ({
+        let data: Row[] = res.data.rows.map((r) => ({
           id: r.id,
           bus: r.bus,
           customer: r.customer,
