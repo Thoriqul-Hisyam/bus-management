@@ -15,11 +15,19 @@ import Pagination from "@/components/shared/pagination";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
 import { CrudModal } from "@/components/shared/crud-modal";
 import { DeleteConfirm } from "@/components/shared/delete-confirm";
-import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import PasswordField from "@/components/shared/password-field";
 import RSelect, { type Option } from "@/components/shared/rselect";
+
+import {
+  CreateFormSchema,
+  buildUpdateFormSchema,
+  PasswordSchema,
+  type CreateForm,
+  type UpdateForm,
+  type PasswordForm,
+} from "@/validators/employee-form";
 
 type SortKey = "name_asc" | "name_desc" | "position_asc" | "position_desc";
 type StatusFilter = "all" | "active" | "inactive";
@@ -34,28 +42,6 @@ type EmployeeRow = {
   username?: string | null;
   isActive?: boolean | null;
 };
-
-const EmployeeFormSchema = z
-  .object({
-    fullName: z.string().min(1, "Nama wajib diisi"),
-    positionId: z.coerce.number().int().positive({ message: "Jabatan wajib dipilih" }),
-    phone: z.string().optional(),
-    username: z.string().min(3, "Min 3 karakter").optional(),
-    password: z.string().min(6, "Min 6 karakter").optional(),
-  })
-  .refine(
-    (data) => (!!data.username && !!data.password) || (!data.username && !data.password),
-    {
-      message: "Isi username dan password bersamaan untuk membuat/mengubah akun.",
-      path: ["username"],
-    }
-  );
-type EmployeeForm = z.infer<typeof EmployeeFormSchema>;
-
-const PasswordSchema = z.object({
-  password: z.string().min(6, "Min 6 karakter"),
-});
-type PasswordForm = z.infer<typeof PasswordSchema>;
 
 export default function EmployeesPage() {
   // UI state
@@ -150,6 +136,7 @@ export default function EmployeesPage() {
   }, [q]);
 
   const startIndex = (page - 1) * perPage;
+
   const columns: DataTableColumn<EmployeeRow>[] = useMemo(
     () => [
       {
@@ -249,6 +236,10 @@ export default function EmployeesPage() {
     sort.startsWith("name") ? "fullName" : sort.startsWith("position") ? "position" : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
+  // penentu schema update: apakah row yang diedit sudah punya akun?
+  const hasAccount = !!editRow?.username;
+  const UpdateFormSchema = useMemo(() => buildUpdateFormSchema(hasAccount), [hasAccount]);
+
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Master Data Karyawan</h1>
@@ -313,25 +304,27 @@ export default function EmployeesPage() {
 
       {/* Pagination */}
       <div className="mt-3">
-        <Pagination
-          page={page}
-          perPage={perPage}
-          total={total}
-          onPageChange={(p) => setPage(p)}
-          onPerPageChange={(pp) => {
-            setPage(1);
-            setPerPage(pp);
-          }}
-        />
+        <div className="mt-2">
+          <Pagination
+            page={page}
+            perPage={perPage}
+            total={total}
+            onPageChange={(p) => setPage(p)}
+            onPerPageChange={(pp) => {
+              setPage(1);
+              setPerPage(pp);
+            }}
+          />
+        </div>
       </div>
 
       {/* Create Modal */}
-      <CrudModal<EmployeeForm>
+      <CrudModal<CreateForm>
         open={createOpen}
         onOpenChange={setCreateOpen}
         title="Tambah Karyawan"
         description="Isi data karyawan dan (opsional) buat akun login."
-        schema={EmployeeFormSchema}
+        schema={CreateFormSchema}
         defaultValues={{
           fullName: "",
           positionId: positions[0]?.id ?? undefined,
@@ -366,7 +359,7 @@ export default function EmployeesPage() {
                 instanceId="position-create"
                 options={positionOptions}
                 value={f.watch("positionId") ?? null}
-                onChange={(v) => f.setValue("positionId", Number(v))}
+                onChange={(v) => f.setValue("positionId", v ? Number(v) : (undefined as any))}
                 isClearable={false}
               />
               {f.formState.errors.positionId && (
@@ -398,12 +391,16 @@ export default function EmployeesPage() {
       />
 
       {/* Edit Modal */}
-      <CrudModal<EmployeeForm>
+      <CrudModal<UpdateForm>
         open={!!editRow}
         onOpenChange={(v) => !v && setEditRow(null)}
         title="Ubah Karyawan"
-        description="Perbarui data karyawan. Untuk ubah password gunakan aksi 'Ubah Password'."
-        schema={EmployeeFormSchema}
+        description={
+          hasAccount
+            ? "Perbarui data karyawan. Password opsional; isi jika ingin mengganti."
+            : "Perbarui data karyawan. Untuk membuat akun, isi username dan password bersamaan."
+        }
+        schema={UpdateFormSchema}
         defaultValues={
           editRow
             ? {
@@ -443,7 +440,7 @@ export default function EmployeesPage() {
                 instanceId="position-edit"
                 options={positionOptions}
                 value={f.watch("positionId") ?? null}
-                onChange={(v) => f.setValue("positionId", Number(v))}
+                onChange={(v) => f.setValue("positionId", v ? Number(v) : (undefined as any))}
                 isClearable={false}
               />
               {f.formState.errors.positionId && (
@@ -460,10 +457,12 @@ export default function EmployeesPage() {
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Username (opsional)</label>
+                <label className="text-sm font-medium">
+                  Username {hasAccount ? "(opsional)" : "(opsional, berpasangan)"}
+                </label>
                 <Input
                   {...f.register("username")}
-                  placeholder="Username (kosongkan jika tidak diubah)"
+                  placeholder={hasAccount ? "Kosongkan jika tidak diubah" : "Isi jika ingin membuat akun"}
                 />
                 {f.formState.errors.username && (
                   <p className="text-sm text-destructive">
@@ -474,8 +473,8 @@ export default function EmployeesPage() {
               <PasswordField
                 form={f}
                 name="password"
-                label="Password (opsional)"
-                placeholder="Biarkan kosong jika tidak diubah"
+                label={hasAccount ? "Password (opsional)" : "Password (opsional, berpasangan)"}
+                placeholder={hasAccount ? "Biarkan kosong jika tidak diubah" : "Isi jika membuat akun baru"}
               />
             </div>
           </>
