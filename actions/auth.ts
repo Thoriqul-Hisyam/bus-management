@@ -2,16 +2,23 @@
 
 import { prisma } from "@/lib/prisma";
 import { compare } from "bcryptjs";
-import { normRole, signSession, clearSession } from "@/lib/auth";
+import { signSession, clearSession } from "@/lib/auth";
 
 export async function login(input: unknown): Promise<{ redirect: string }> {
   const body = input as { username?: string; password?: string };
-  if (!body?.username || !body?.password)
-    throw new Error("Username dan password wajib diisi.");
+  if (!body?.username || !body?.password) throw new Error("Username dan password wajib diisi.");
 
   const account = await prisma.account.findFirst({
     where: { username: body.username },
-    include: { employee: { include: { position: true } } },
+    include: {
+      employee: {
+        include: {
+          position: {
+            include: { permissions: { include: { permission: true } } },
+          },
+        },
+      },
+    },
   });
 
   if (!account) throw new Error("Akun tidak ditemukan.");
@@ -20,7 +27,10 @@ export async function login(input: unknown): Promise<{ redirect: string }> {
   const valid = await compare(body.password, account.passwordHash);
   if (!valid) throw new Error("Username atau password salah.");
 
-  const role = normRole(account.employee?.position?.name);
+  const pos = account.employee?.position ?? null;
+  const perms = new Set<string>();
+  pos?.permissions.forEach(pp => perms.add(pp.permission.code));
+
   await prisma.account.update({
     where: { id: account.id },
     data: { lastLoginAt: new Date() },
@@ -30,7 +40,8 @@ export async function login(input: unknown): Promise<{ redirect: string }> {
     sub: account.id,
     empId: account.employeeId,
     name: account.employee?.fullName || account.username,
-    role,
+    positionName: pos?.name ?? null,
+    perms: Array.from(perms),
   });
 
   return { redirect: "/" };

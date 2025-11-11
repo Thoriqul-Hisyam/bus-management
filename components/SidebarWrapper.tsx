@@ -7,5 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function SidebarWrapper() {
   noStore();
   const session = await readSession();
-  return <Sidebar role={session?.role ?? "admin"} />;
+  return (
+    <Sidebar
+      perms={session?.perms ?? []}
+      positionName={session?.positionName ?? ""}
+      name={session?.name ?? ""}
+    />
+  );
 }

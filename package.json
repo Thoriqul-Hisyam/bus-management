@@ -5,6 +5,8 @@
   "scripts": {
     "key:generate": "node scripts/gen-key.mjs",
     "seed": "prisma db seed",
+    "seed:accounts": "tsx prisma/seeds/01-roles-accounts.ts",
+    "seed:permissions": "tsx prisma/seeds/02-permissions.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

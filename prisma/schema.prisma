@@ -33,6 +33,51 @@ model Bus {
   busType   BusType   @relation(fields: [busTypeId], references: [id])
 
   bookings  Booking[]
+  @@map("bus")
+}
+
+model PermissionMenu {
+  id        Int               @id @default(autoincrement())
+  code      String            @unique         // e.g. "menu.master.bus"
+  label     String                              // e.g. "Armada"
+  sort      Int               @default(0)
+
+  parentId  Int?
+  parent    PermissionMenu?   @relation("PermissionMenuToChildren", fields: [parentId], references: [id])
+  children  PermissionMenu[]  @relation("PermissionMenuToChildren")
+
+  permissions Permission[]    // permission di bawah menu ini
+
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@map("permission_menu")
+}
+
+model Permission {
+  id        Int       @id @default(autoincrement())
+  code      String    @unique              // e.g. "master.position.read"
+  label     String?                          // e.g. "Lihat Jabatan"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  menuId    Int?
+  menu      PermissionMenu? @relation(fields: [menuId], references: [id])
+
+  positions PositionPermission[]
+
+  @@map("permission")
+}
+
+model PositionPermission {
+  positionId   Int
+  permissionId Int
+
+  position     Position   @relation(fields: [positionId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([positionId, permissionId])
+  @@map("position_permission")
 }
 
 model Position {
@@ -41,6 +86,8 @@ model Position {
   employees  Employee[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @default(now())
+
+  permissions PositionPermission[]
 
   @@map("position")
 }
@@ -194,4 +241,3 @@ model TripSheet {
   booking         Booking   @relation(fields: [bookingId], references: [id])
   
   @@map("tripsheet")
-}

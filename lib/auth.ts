@@ -6,22 +6,13 @@ const COOKIE_NAME = "auth_token";
 const ALG = "HS256";
 const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me");
 
-export type AppRole = "superadmin" | "manager" | "finance" | "admin";
-
 export type Session = {
-  sub: number;
-  empId: number;
-  name: string;
-  role: AppRole;
+  sub: number;              // account id
+  empId: number;            // employee id
+  name: string;             // display name
+  positionName: string|null;// Position.name (role)
+  perms: string[];          // permission codes
 };
-
-function normRole(raw?: string | null): AppRole {
-  const v = (raw || "").toLowerCase().trim();
-  if (v === "superadmin") return "superadmin";
-  if (v === "manager") return "manager";
-  if (v === "finance") return "finance";
-  return "admin";
-}
 
 export async function signSession(payload: Session, maxAgeSec = 60 * 60 * 8) {
   const jwt = await new SignJWT(payload as unknown as JWTPayload)
@@ -30,7 +21,7 @@ export async function signSession(payload: Session, maxAgeSec = 60 * 60 * 8) {
     .setExpirationTime(`${maxAgeSec}s`)
     .sign(SECRET);
 
-  const jar = await cookies(); // ⬅️ penting
+  const jar = await cookies();
   jar.set({
     name: COOKIE_NAME,
     value: jwt,
@@ -43,7 +34,7 @@ export async function signSession(payload: Session, maxAgeSec = 60 * 60 * 8) {
 }
 
 export async function readSession(): Promise<Session | null> {
-  const jar = await cookies(); // ⬅️ penting
+  const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
   try {
@@ -55,7 +46,7 @@ export async function readSession(): Promise<Session | null> {
 }
 
 export async function clearSession() {
-  const jar = await cookies(); // ⬅️ penting
+  const jar = await cookies();
   jar.set({
     name: COOKIE_NAME,
     value: "",
@@ -67,16 +58,8 @@ export async function clearSession() {
   });
 }
 
-export function roleAllows(role: AppRole, needed: AppRole | AppRole[]) {
-  const set = Array.isArray(needed) ? needed : [needed];
-  const rank: Record<AppRole, number> = {
-    superadmin: 4,
-    manager: 3,
-    finance: 2,
-    admin: 1,
-  };
-  const r = rank[role];
-  return set.some((need) => r >= rank[need]);
+export function hasPerm(session: Session | null, ...need: string[]) {
+  if (!session) return false;
+  const set = new Set(session.perms);
+  return need.some(n => set.has(n));
 }
-
-export { normRole };

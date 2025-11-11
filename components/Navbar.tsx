@@ -1,4 +1,3 @@
-// components/Navbar.tsx (server component)
 import { readSession } from "@/lib/auth";
 import { logout } from "@/actions/auth";
 import { redirect } from "next/navigation";
@@ -23,7 +22,7 @@ export default async function Navbar() {
         {session ? (
           <>
             <span className="hidden sm:inline">
-              {session.name} • {session.role.toUpperCase()}
+              {session.name} {session.positionName ? `• ${session.positionName}` : ""}
             </span>
             <form action={logoutAction}>
               <button
