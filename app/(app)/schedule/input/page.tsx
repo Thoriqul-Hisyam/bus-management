@@ -2,8 +2,15 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { listSchedules, deleteSchedule, listBusOptions } from "@/actions/schedule";
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import {
+  listSchedules,
+  deleteSchedule,
+  listBusOptions,
+} from "@/actions/schedule";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +32,8 @@ type Row = {
   bus: string | null;
   plateNo: string | null;
   pickupAddress: string | null;
+  customerTravel: string | null;
+  customerPhone: string | null;
   destination: string | null;
   seatsBooked: number | null;
   amount: number; // DP
@@ -142,33 +151,140 @@ export default function ScheduleInputPage() {
   const startIndex = (page - 1) * perPage;
   const columns: DataTableColumn<Row>[] = useMemo(
     () => [
-      { key: "no", label: "No.", className: "w-14 text-center", render: (_r, i) => i + 1 },
-      { key: "customer", label: "Customer", render: (r) => r.customer ?? "—" },
+      {
+        key: "no",
+        label: "No.",
+        className: "w-14 text-center",
+        render: (_r, i) => i + 1,
+      },
+      {
+        key: "customer",
+        label: "Customer",
+        render: (r) => (
+          <div className="flex flex-col">
+            <span className="font-medium">{r.customer ?? "—"}</span>
+            <span className="text-xs text-muted-foreground">
+              {r.customerTravel ?? "-"}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: "customerPhone",
+        label: "No. Customer",
+        render: (r) => r.customerPhone ?? "—",
+      },
       {
         key: "bus",
         label: "Armada",
         render: (r) => (
           <div className="flex flex-col">
             <span className="font-medium">{r.bus ?? "—"}</span>
-            <span className="text-xs text-muted-foreground">{r.plateNo ?? ""}</span>
+            <span className="text-xs text-muted-foreground">
+              {r.plateNo ?? ""}
+            </span>
           </div>
         ),
       },
-      { key: "legrest", label: "Legrest", render: (r) => (r.legrest ? "Yes" : "No") },
-      { key: "pickupAddress", label: "Penjemputan", render: (r) => r.pickupAddress ?? "—" },
-      { key: "destination", label: "Tujuan", render: (r) => r.destination ?? "—" },
+      {
+        key: "legrest",
+        label: "Legrest",
+        render: (r) => (r.legrest ? "Yes" : "No"),
+      },
+      {
+        key: "pickupAddress",
+        label: "Penjemputan",
+        render: (r) => r.pickupAddress ?? "—",
+      },
+      {
+        key: "pickupAt",
+        label: "Tgl Penjemputan",
+        render: (r) => {
+          if (!r.pickupAt) return <span>—</span>;
+
+          const date = new Date(r.pickupAt);
+          const tanggal = date.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          const jam = `${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}`;
+          return (
+            <div className="flex flex-col text-sm leading-tight text-center">
+              <span>{tanggal}</span>
+              <span className="text-muted-foreground text-center">{jam}</span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "destination",
+        label: "Tujuan",
+        render: (r) => r.destination ?? "—",
+      },
       {
         key: "amount",
         label: "DP / Total",
         render: (r) => (
           <div className="flex flex-col">
             <span className="text-xs">DP: Rp {r.amount.toLocaleString()}</span>
-            <span className="font-medium">Rp {r.priceTotal.toLocaleString()}</span>
+            <span className="font-medium">
+              Rp {r.priceTotal.toLocaleString()}
+            </span>
           </div>
         ),
       },
-      { key: "rentStartAt", label: "Mulai", sortable: true, render: (r) => fmtDate(r.rentStartAt) },
-      { key: "rentEndAt", label: "Selesai", sortable: true, render: (r) => fmtDate(r.rentEndAt) },
+      {
+        key: "rentStartAt",
+        label: "Mulai",
+        sortable: true,
+        render: (r) => {
+          if (!r.rentStartAt) return <span>—</span>;
+
+          const date = new Date(r.rentStartAt);
+          const tanggal = date.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          const jam = `${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}`;
+          return (
+            <div className="flex flex-col text-sm leading-tight text-center">
+              <span>{tanggal}</span>
+              <span className="text-muted-foreground text-center">{jam}</span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "rentEndAt",
+        label: "Selesai",
+        sortable: true,
+        render: (r) => {
+          if (!r.rentEndAt) return <span>—</span>;
+
+          const date = new Date(r.rentEndAt);
+          const tanggal = date.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          const jam = `${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}`;
+          return (
+            <div className="flex flex-col text-sm leading-tight text-center">
+              <span>{tanggal}</span>
+              <span className="text-muted-foreground text-center">{jam}</span>
+            </div>
+          );
+        },
+      },
+
       {
         key: "crew",
         label: "Crew",
@@ -222,8 +338,11 @@ export default function ScheduleInputPage() {
     [page, perPage]
   );
 
-  const sortKey =
-    sort.startsWith("start") ? "rentStartAt" : sort.startsWith("end") ? "rentEndAt" : undefined;
+  const sortKey = sort.startsWith("start")
+    ? "rentStartAt"
+    : sort.startsWith("end")
+    ? "rentEndAt"
+    : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
@@ -253,7 +372,9 @@ export default function ScheduleInputPage() {
         </div>
 
         <div className="min-w-48 w-full">
-          <label className="block text-xs text-muted-foreground mb-1">Filter Armada</label>
+          <label className="block text-xs text-muted-foreground mb-1">
+            Filter Armada
+          </label>
           <RSelect
             instanceId="bus-filter"
             options={[{ value: "all", label: "Semua Armada" }, ...busOptions]}
@@ -269,7 +390,9 @@ export default function ScheduleInputPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Mulai Dari</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Mulai Dari
+            </label>
             <Input
               type="datetime-local"
               value={startFrom}
@@ -280,7 +403,9 @@ export default function ScheduleInputPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Selesai Hingga</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Selesai Hingga
+            </label>
             <Input
               type="datetime-local"
               value={endTo}
@@ -294,7 +419,9 @@ export default function ScheduleInputPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Urutkan</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Urutkan
+            </label>
             <RSelect
               instanceId="sort-schedule"
               options={[
@@ -314,10 +441,15 @@ export default function ScheduleInputPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Per Halaman</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Per Halaman
+            </label>
             <RSelect
               instanceId="perpage-schedule"
-              options={[10, 20, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+              options={[10, 20, 50, 100].map((n) => ({
+                value: String(n),
+                label: String(n),
+              }))}
               value={String(perPage)}
               onChange={(v) => {
                 const pp = Number(v ?? "10");
@@ -341,7 +473,9 @@ export default function ScheduleInputPage() {
         onHeaderClick={(col) => {
           if (col.key === "rentStartAt") {
             setPage(1);
-            setSort((prev) => (prev === "start_asc" ? "start_desc" : "start_asc"));
+            setSort((prev) =>
+              prev === "start_asc" ? "start_desc" : "start_asc"
+            );
           }
           if (col.key === "rentEndAt") {
             setPage(1);
