@@ -10,7 +10,10 @@ import {
   changeEmployeePassword,
 } from "@/actions/employee";
 import { listAllPositions } from "@/actions/position";
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
 import { CrudModal } from "@/components/shared/crud-modal";
@@ -64,6 +67,8 @@ export default function EmployeesPage() {
   const [editRow, setEditRow] = useState<EmployeeRow | null>(null);
   const [deleting, setDeleting] = useState<EmployeeRow | null>(null);
   const [pwdRow, setPwdRow] = useState<EmployeeRow | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
 
   const positionOptions: Option[] = useMemo(
     () => positions.map((p) => ({ value: p.id, label: p.name })),
@@ -232,14 +237,20 @@ export default function EmployeesPage() {
     [page, perPage]
   );
 
-  const sortKey =
-    sort.startsWith("name") ? "fullName" : sort.startsWith("position") ? "position" : undefined;
+  const sortKey = sort.startsWith("name")
+    ? "fullName"
+    : sort.startsWith("position")
+    ? "position"
+    : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   // penentu schema update: apakah row yang diedit sudah punya akun?
   const hasAccount = !!editRow?.username;
-  const UpdateFormSchema = useMemo(() => buildUpdateFormSchema(hasAccount), [hasAccount]);
-
+  const UpdateFormSchema = useMemo(
+    () => buildUpdateFormSchema(hasAccount),
+    [hasAccount]
+  );
+  if (!isClient) return null;
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Master Data Karyawan</h1>
@@ -297,7 +308,9 @@ export default function EmployeesPage() {
           }
           if (col.key === "position") {
             setPage(1);
-            setSort((prev) => (prev === "position_asc" ? "position_desc" : "position_asc"));
+            setSort((prev) =>
+              prev === "position_asc" ? "position_desc" : "position_asc"
+            );
           }
         }}
       />
@@ -345,7 +358,11 @@ export default function EmployeesPage() {
           <>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Lengkap</label>
-              <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
+              <Input
+                {...f.register("fullName")}
+                placeholder="Nama lengkap"
+                autoFocus
+              />
               {f.formState.errors.fullName && (
                 <p className="text-sm text-destructive">
                   {String(f.formState.errors.fullName.message)}
@@ -359,7 +376,9 @@ export default function EmployeesPage() {
                 instanceId="position-create"
                 options={positionOptions}
                 value={f.watch("positionId") ?? null}
-                onChange={(v) => f.setValue("positionId", v ? Number(v) : (undefined as any))}
+                onChange={(v) =>
+                  f.setValue("positionId", v ? Number(v) : (undefined as any))
+                }
                 isClearable={false}
               />
               {f.formState.errors.positionId && (
@@ -376,7 +395,9 @@ export default function EmployeesPage() {
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Username (opsional)</label>
+                <label className="text-sm font-medium">
+                  Username (opsional)
+                </label>
                 <Input {...f.register("username")} placeholder="Username" />
                 {f.formState.errors.username && (
                   <p className="text-sm text-destructive">
@@ -384,7 +405,11 @@ export default function EmployeesPage() {
                   </p>
                 )}
               </div>
-              <PasswordField form={f} name="password" label="Password (opsional)" />
+              <PasswordField
+                form={f}
+                name="password"
+                label="Password (opsional)"
+              />
             </div>
           </>
         )}
@@ -426,7 +451,11 @@ export default function EmployeesPage() {
           <>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nama Lengkap</label>
-              <Input {...f.register("fullName")} placeholder="Nama lengkap" autoFocus />
+              <Input
+                {...f.register("fullName")}
+                placeholder="Nama lengkap"
+                autoFocus
+              />
               {f.formState.errors.fullName && (
                 <p className="text-sm text-destructive">
                   {String(f.formState.errors.fullName.message)}
@@ -440,7 +469,9 @@ export default function EmployeesPage() {
                 instanceId="position-edit"
                 options={positionOptions}
                 value={f.watch("positionId") ?? null}
-                onChange={(v) => f.setValue("positionId", v ? Number(v) : (undefined as any))}
+                onChange={(v) =>
+                  f.setValue("positionId", v ? Number(v) : (undefined as any))
+                }
                 isClearable={false}
               />
               {f.formState.errors.positionId && (
@@ -458,11 +489,16 @@ export default function EmployeesPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Username {hasAccount ? "(opsional)" : "(opsional, berpasangan)"}
+                  Username{" "}
+                  {hasAccount ? "(opsional)" : "(opsional, berpasangan)"}
                 </label>
                 <Input
                   {...f.register("username")}
-                  placeholder={hasAccount ? "Kosongkan jika tidak diubah" : "Isi jika ingin membuat akun"}
+                  placeholder={
+                    hasAccount
+                      ? "Kosongkan jika tidak diubah"
+                      : "Isi jika ingin membuat akun"
+                  }
                 />
                 {f.formState.errors.username && (
                   <p className="text-sm text-destructive">
@@ -473,8 +509,16 @@ export default function EmployeesPage() {
               <PasswordField
                 form={f}
                 name="password"
-                label={hasAccount ? "Password (opsional)" : "Password (opsional, berpasangan)"}
-                placeholder={hasAccount ? "Biarkan kosong jika tidak diubah" : "Isi jika membuat akun baru"}
+                label={
+                  hasAccount
+                    ? "Password (opsional)"
+                    : "Password (opsional, berpasangan)"
+                }
+                placeholder={
+                  hasAccount
+                    ? "Biarkan kosong jika tidak diubah"
+                    : "Isi jika membuat akun baru"
+                }
               />
             </div>
           </>
@@ -486,12 +530,17 @@ export default function EmployeesPage() {
         open={!!pwdRow}
         onOpenChange={(v) => !v && setPwdRow(null)}
         title="Ubah Password Akun"
-        description={pwdRow?.username ? `Untuk pengguna: ${pwdRow.username}` : undefined}
+        description={
+          pwdRow?.username ? `Untuk pengguna: ${pwdRow.username}` : undefined
+        }
         schema={PasswordSchema}
         defaultValues={{ password: "" }}
         onSubmit={async (values) => {
           if (!pwdRow) return;
-          const res = await changeEmployeePassword({ id: pwdRow.id, password: values.password });
+          const res = await changeEmployeePassword({
+            id: pwdRow.id,
+            password: values.password,
+          });
           if (res.ok) {
             setPwdRow(null);
             await fetchData();
@@ -514,7 +563,9 @@ export default function EmployeesPage() {
       <DeleteConfirm
         open={!!deleting}
         title="Yakin ingin menghapus?"
-        description={`Data "${deleting?.fullName ?? ""}" akan dihapus permanen.`}
+        description={`Data "${
+          deleting?.fullName ?? ""
+        }" akan dihapus permanen.`}
         onOpenChange={(v) => !v && setDeleting(null)}
         onConfirm={async () => {
           if (!deleting) return;

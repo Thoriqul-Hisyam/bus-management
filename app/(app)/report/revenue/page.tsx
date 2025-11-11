@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { listSchedules } from "@/actions/schedule";
+import { listSchedules, listBusOptions } from "@/actions/schedule";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,7 @@ import {
   type DataTableColumn,
 } from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
+import RSelect, { type Option as ROption } from "@/components/shared/rselect";
 
 type SortKey =
   | "bus_asc"
@@ -40,12 +41,16 @@ export default function ReportRevenuePage() {
 
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
-  const [busFilter, setBusFilter] = useState<string>("");
+  // === Filter State ===
+  const [filterBusId, setFilterBusId] = useState<number | "all">("all");
+  const [busOptions, setBusOptions] = useState<ROption[]>([]);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  useEffect(() => setIsClient(true), []);
 
-  // 🔹 Fetch data
+  // 🔹 Fetch Data
   async function fetchData(opts?: { page?: number }) {
     const _page = opts?.page ?? page;
     setIsLoading(true);
@@ -61,8 +66,12 @@ export default function ReportRevenuePage() {
           trips: 1,
         }));
 
-        // Filter bus
-        if (busFilter) data = data.filter((r) => r.bus.includes(busFilter));
+        // Filter Bus (dropdown)
+        if (filterBusId !== "all" && filterBusId != null) {
+          const selected = busOptions.find((b) => b.value === filterBusId);
+          if (selected?.label)
+            data = data.filter((r) => r.bus === selected.label);
+        }
 
         // Filter tanggal
         if (dateFrom && dateTo) {
@@ -107,9 +116,19 @@ export default function ReportRevenuePage() {
     }
   }
 
+  // 🔹 Load data + bus options
+  useEffect(() => {
+    startTransition(async () => {
+      const busRes = await listBusOptions();
+      if (busRes.ok) setBusOptions(busRes.data);
+      await fetchData({ page: 1 });
+    });
+  }, []);
+
+  // 🔹 Re-fetch saat filter berubah
   useEffect(() => {
     startTransition(() => void fetchData({ page: 1 }));
-  }, [q, busFilter, dateFrom, dateTo, sort, perPage]);
+  }, [q, filterBusId, dateFrom, dateTo, sort, perPage]);
 
   const startIndex = (page - 1) * perPage;
 
@@ -146,24 +165,45 @@ export default function ReportRevenuePage() {
   );
 
   const totalRevenue = rows.reduce((sum, r) => sum + r.totalRevenue, 0);
-
+  if (!isClient) return null;
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Laporan Pendapatan</h1>
 
       {/* Toolbar */}
       <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <Input
-          placeholder="Cari armada / Customer..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <Input
-          type="text"
-          placeholder="Filter Armada..."
-          value={busFilter}
-          onChange={(e) => setBusFilter(e.target.value)}
-        />
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Cari armada / Customer..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          {q ? (
+            <Button variant="ghost" onClick={() => setQ("")}>
+              Reset
+            </Button>
+          ) : null}
+        </div>
+
+        {/* Filter Armada Dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Armada
+          </span>
+          <div className="min-w-48 w-48">
+            <RSelect
+              instanceId="revenue-bus-filter"
+              options={[{ value: "all", label: "Semua Armada" }, ...busOptions]}
+              value={filterBusId}
+              onChange={(v) =>
+                setFilterBusId(v === "all" || v == null ? "all" : Number(v))
+              }
+            />
+          </div>
+        </div>
+
+        {/* Date Filters */}
         <Input
           type="date"
           value={dateFrom}

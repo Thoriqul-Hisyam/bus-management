@@ -73,17 +73,14 @@ export default function ScheduleInputPage() {
 
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
 
   useEffect(() => {
     (async () => {
       const res = await listBusOptions();
       if (res.ok) {
-        setBusOptions(
-          res.data.map((b: any) => ({
-            value: b.id,
-            label: b.name ?? `Bus ${b.id}`,
-          }))
-        );
+        setBusOptions(res.data);
       } else {
         console.error(res.error);
       }
@@ -344,7 +341,7 @@ export default function ScheduleInputPage() {
     ? "rentEndAt"
     : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
-
+  if (!isClient) return null;
   return (
     <main className="p-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
