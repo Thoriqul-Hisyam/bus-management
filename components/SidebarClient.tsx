@@ -60,7 +60,7 @@ export default function Sidebar({
         </Link>
       )}
 
-      {has("trip_sheet.read") && (
+      {(has("trip_sheet.print") || has("trip_sheet.write")) && (
         <Link href="/trip_sheet" className={linkClass("/trip_sheet")}>
           <FaClipboardList /> Surat Jalan
         </Link>

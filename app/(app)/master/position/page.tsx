@@ -1,22 +1,18 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { listPositions, createPosition, updatePosition, deletePosition } from "@/actions/position";
+import { listPositions, deletePosition } from "@/actions/position";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
-import { CrudModal } from "@/components/shared/crud-modal";
-import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirm } from "@/components/shared/delete-confirm";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type SortKey = "name_asc" | "name_desc" | "id_asc" | "id_desc";
 type PositionRow = { id: number; name: string };
-
-const PositionSchema = z.object({
-  name: z.string().min(1, "Nama jabatan wajib diisi"),
-});
 
 export default function PositionPage() {
   const [q, setQ] = useState<string>("");
@@ -29,11 +25,15 @@ export default function PositionPage() {
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editRow, setEditRow] = useState<PositionRow | null>(null);
   const [deleting, setDeleting] = useState<PositionRow | null>(null);
+  const router = useRouter();
 
-  async function fetchData(opts?: { q?: string; sort?: SortKey; page?: number; perPage?: number }) {
+  async function fetchData(opts?: {
+    q?: string;
+    sort?: SortKey;
+    page?: number;
+    perPage?: number;
+  }) {
     const _q = opts?.q ?? q;
     const _sort = opts?.sort ?? sort;
     const _page = opts?.page ?? page;
@@ -41,7 +41,12 @@ export default function PositionPage() {
 
     setIsLoading(true);
     try {
-      const res = await listPositions({ q: _q, sort: _sort, page: _page, perPage: _perPage });
+      const res = await listPositions({
+        q: _q,
+        sort: _sort,
+        page: _page,
+        perPage: _perPage,
+      });
       setRows(res.rows);
       setTotal(res.total);
     } finally {
@@ -93,7 +98,7 @@ export default function PositionPage() {
             { key: "delete", label: "Hapus", destructive: true },
           ]}
           onClickItem={(key) => {
-            if (key === "edit") setEditRow(row);
+            if (key === "edit") router.push(`/master/position/${row.id}/edit`);
             else if (key === "delete") setDeleting(row);
           }}
         />
@@ -102,7 +107,8 @@ export default function PositionPage() {
   ];
 
   const sortKey = sort.startsWith("name") ? "name" : undefined;
-  const sortDir = sort === "name_asc" ? "asc" : sort === "name_desc" ? "desc" : undefined;
+  const sortDir =
+    sort === "name_asc" ? "asc" : sort === "name_desc" ? "desc" : undefined;
 
   return (
     <main className="p-6">
@@ -124,7 +130,9 @@ export default function PositionPage() {
         </div>
 
         <div className="sm:ml-auto flex items-center gap-2">
-          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
+          <Button asChild>
+            <Link href="/master/position/new">+ Tambah</Link>
+          </Button>
         </div>
       </div>
 
@@ -154,60 +162,6 @@ export default function PositionPage() {
           }}
         />
       </div>
-
-      <CrudModal
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title="Tambah Jabatan"
-        description="Isi nama jabatan untuk menambahkan data baru."
-        schema={PositionSchema}
-        onSubmit={async (values) => {
-          const res = await createPosition(values);
-          if (res.ok) {
-            setCreateOpen(false);
-            await fetchData();
-          } else {
-            throw new Error(res.error);
-          }
-        }}
-        renderFields={(f) => (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Nama Jabatan</label>
-            <Input placeholder="Contoh: Driver, Admin, Manager" {...f.register("name")} autoFocus />
-            {f.formState.errors.name && (
-              <p className="text-sm text-destructive">{f.formState.errors.name.message}</p>
-            )}
-          </div>
-        )}
-      />
-
-      <CrudModal
-        open={!!(editRow && editRow.id)}
-        onOpenChange={(v) => !v && setEditRow(null)}
-        title="Ubah Jabatan"
-        description="Perbarui nama jabatan di bawah ini."
-        schema={PositionSchema}
-        defaultValues={editRow ? { name: editRow.name } : undefined}
-        onSubmit={async (values) => {
-          if (!editRow) return;
-          const res = await updatePosition({ id: editRow.id, ...values });
-          if (res.ok) {
-            setEditRow(null);
-            await fetchData();
-          } else {
-            throw new Error(res.error);
-          }
-        }}
-        renderFields={(f) => (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Nama Jabatan</label>
-            <Input placeholder="Nama jabatan" {...f.register("name")} autoFocus />
-            {f.formState.errors.name && (
-              <p className="text-sm text-destructive">{f.formState.errors.name.message}</p>
-            )}
-          </div>
-        )}
-      />
 
       <DeleteConfirm
         open={!!deleting}
