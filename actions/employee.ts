@@ -2,10 +2,15 @@
 
 import { prisma } from "@/lib/prisma";
 import { ok, err, type Result } from "@/lib/result";
-import { EmployeeCreateSchema, EmployeeUpdateSchema, EmployeePasswordChangeSchema } from "@/validators/employee";
+import {
+  EmployeeCreateSchema,
+  EmployeeUpdateSchema,
+  EmployeePasswordChangeSchema,
+} from "@/validators/employee";
 import { revalidateMasterEmployees } from "./_utils";
 import { hash } from "bcryptjs";
 import type { Prisma } from "@prisma/client";
+import { requirePermission } from "@/lib/guard";
 
 export async function listEmployees(input?: {
   q?: string;
@@ -22,10 +27,13 @@ export async function listEmployees(input?: {
     const status = input?.status ?? "all";
 
     const orderBy =
-      sort === "name_asc" ? [{ fullName: "asc" as const }] :
-      sort === "name_desc" ? [{ fullName: "desc" as const }] :
-      sort === "position_asc" ? [{ position: { name: "asc" as const } }] :
-      [{ position: { name: "desc" as const } }];
+      sort === "name_asc"
+        ? [{ fullName: "asc" as const }]
+        : sort === "name_desc"
+        ? [{ fullName: "desc" as const }]
+        : sort === "position_asc"
+        ? [{ position: { name: "asc" as const } }]
+        : [{ position: { name: "desc" as const } }];
 
     const where: Prisma.EmployeeWhereInput = {
       AND: [
@@ -76,6 +84,8 @@ export async function listEmployees(input?: {
 
 export async function createEmployee(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.employees.create");
+
     const parsed = EmployeeCreateSchema.safeParse(input);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
@@ -125,6 +135,8 @@ export async function createEmployee(input: unknown): Promise<Result<any>> {
 
 export async function updateEmployee(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.employees.update");
+
     const parsed = EmployeeUpdateSchema.safeParse(input);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
@@ -190,9 +202,10 @@ export async function updateEmployee(input: unknown): Promise<Result<any>> {
   }
 }
 
-
 export async function deleteEmployee(id: number): Promise<Result<{ message: string }>> {
   try {
+    await requirePermission("master.employees.delete");
+
     const usedCount = await prisma.booking.count({
       where: {
         OR: [{ driverId: id }, { coDriverId: id }, { salesId: id }],
@@ -201,7 +214,7 @@ export async function deleteEmployee(id: number): Promise<Result<{ message: stri
     if (usedCount > 0) {
       return err(
         `Tidak bisa menghapus: karyawan masih dipakai di ${usedCount} booking sebagai driver/co-driver/sales. ` +
-        `Re-assign booking terlebih dahulu.`
+          `Re-assign booking terlebih dahulu.`
       );
     }
 
@@ -223,8 +236,12 @@ export async function deleteEmployee(id: number): Promise<Result<{ message: stri
   }
 }
 
-export async function toggleEmployeeAccountStatus(employeeId: number): Promise<Result<{ isActive: boolean }>> {
+export async function toggleEmployeeAccountStatus(
+  employeeId: number
+): Promise<Result<{ isActive: boolean }>> {
   try {
+    await requirePermission("master.employees.update");
+
     const account = await prisma.account.findUnique({ where: { employeeId } });
     if (!account) return err("Karyawan belum memiliki akun.");
 
@@ -241,8 +258,12 @@ export async function toggleEmployeeAccountStatus(employeeId: number): Promise<R
   }
 }
 
-export async function changeEmployeePassword(input: unknown): Promise<Result<{ message: string }>> {
+export async function changeEmployeePassword(
+  input: unknown
+): Promise<Result<{ message: string }>> {
   try {
+    await requirePermission("master.employees.update");
+
     const parsed = EmployeePasswordChangeSchema.safeParse(input);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 

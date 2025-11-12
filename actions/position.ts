@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidateMasterPositions } from "./_utils";
 import { ok, err, type Result } from "@/lib/result";
 import { PositionCreateSchema, PositionUpdateSchema } from "@/validators/position";
+import { requirePermission } from "@/lib/guard";
 
 const LOCKED_NAMES = new Set(["superadmin", "co-driver", "driver", "sales"]);
 
@@ -25,16 +26,20 @@ export async function listPositions(input?: {
   perPage?: number;
   sort?: "name_asc" | "name_desc" | "id_asc" | "id_desc";
 }): Promise<{ rows: Array<{ id: number; name: string }>; total: number }> {
+
   const q = input?.q?.trim() ?? "";
   const page = Math.max(Number(input?.page ?? 1), 1);
   const perPage = Math.min(Math.max(Number(input?.perPage ?? 10), 1), 100);
   const sort = input?.sort ?? "name_asc";
 
   const orderBy =
-    sort === "name_asc" ? [{ name: "asc" as const }] :
-    sort === "name_desc" ? [{ name: "desc" as const }] :
-    sort === "id_asc" ? [{ id: "asc" as const }] :
-    [{ id: "desc" as const }];
+    sort === "name_asc"
+      ? [{ name: "asc" as const }]
+      : sort === "name_desc"
+      ? [{ name: "desc" as const }]
+      : sort === "id_asc"
+      ? [{ id: "asc" as const }]
+      : [{ id: "desc" as const }];
 
   const where = q ? { name: { contains: q } } : {};
 
@@ -63,6 +68,8 @@ export async function getPositionDetail(
   id: number
 ): Promise<Result<{ id: number; name: string; permissionIds: number[] }>> {
   try {
+    await requirePermission("master.position.read");
+
     const pos = await prisma.position.findUnique({
       where: { id },
       select: {
@@ -84,6 +91,8 @@ export async function getPositionDetail(
 
 export async function createPosition(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.position.create");
+
     const { name, permissionIds } = PositionCreateSchema.parse(input);
 
     const result = await prisma.$transaction(async (tx) => {
@@ -109,6 +118,8 @@ export async function createPosition(input: unknown): Promise<Result<any>> {
 
 export async function updatePosition(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.position.update");
+
     const { id, name, permissionIds } = PositionUpdateSchema.parse(input);
 
     const current = await prisma.position.findUnique({
@@ -153,6 +164,8 @@ export async function deletePosition(
   id: number
 ): Promise<Result<{ message: string }>> {
   try {
+    await requirePermission("master.position.delete");
+
     const current = await prisma.position.findUnique({
       where: { id },
       select: { id: true, name: true },

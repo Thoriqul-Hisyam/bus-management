@@ -5,6 +5,7 @@ import { ok, err, type Result } from "@/lib/result";
 import { BusTypeCreateSchema, BusTypeUpdateSchema } from "@/validators/bus-type";
 import { revalidateMasterBusTypes } from "./_utils";
 import { Prisma } from "@prisma/client";
+import { requirePermission } from "@/lib/guard";
 
 export async function listBusTypes(input?: {
   q?: string;
@@ -47,6 +48,8 @@ export async function listBusTypes(input?: {
 
 export async function createBusType(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.bus_type.create");
+
     const parsed = BusTypeCreateSchema.safeParse(input);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
@@ -67,6 +70,8 @@ export async function createBusType(input: unknown): Promise<Result<any>> {
 
 export async function updateBusType(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.bus_type.update");
+
     const parsed = BusTypeUpdateSchema.safeParse(input);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
@@ -88,6 +93,8 @@ export async function updateBusType(input: unknown): Promise<Result<any>> {
 
 export async function deleteBusType(id: number): Promise<Result<{ message: string }>> {
   try {
+    await requirePermission("master.bus_type.delete");
+
     await prisma.busType.delete({ where: { id } });
     revalidateMasterBusTypes();
     return ok({ message: "Tipe armada dihapus" });

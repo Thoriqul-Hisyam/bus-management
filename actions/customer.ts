@@ -7,6 +7,8 @@ import {
 } from "@/validators/customer";
 import { revalidateMasterCustomers } from "./_utils";
 import { ok, err, type Result } from "@/lib/result";
+import { Prisma } from "@prisma/client";
+import { requirePermission } from "@/lib/guard";
 
 export async function listCustomers(input?: {
   q?: string;
@@ -36,7 +38,6 @@ export async function listCustomers(input?: {
     const perPage = Math.min(Math.max(Number(input?.perPage ?? 10), 1), 100);
     const sort = input?.sort ?? "name_asc";
 
-    // Urutan hasil
     const orderBy:
       | Prisma.Enumerable<Prisma.CustomerOrderByWithRelationInput>
       | undefined =
@@ -52,7 +53,6 @@ export async function listCustomers(input?: {
         ? [{ travel: "asc" }]
         : [{ travel: "desc" }];
 
-    // Filter pencarian
     const whereAnd: Prisma.CustomerWhereInput[] = [];
 
     if (q) {
@@ -68,7 +68,6 @@ export async function listCustomers(input?: {
     const where: Prisma.CustomerWhereInput =
       whereAnd.length > 0 ? { AND: whereAnd } : {};
 
-    // Ambil data dan total
     const [rows, total] = await Promise.all([
       prisma.customer.findMany({
         where,
@@ -95,6 +94,8 @@ export async function listCustomers(input?: {
 // CREATE
 export async function createCustomer(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.customers.create");
+
     const parsed = CustomerCreateSchema.safeParse(input);
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
@@ -114,6 +115,8 @@ export async function createCustomer(input: unknown): Promise<Result<any>> {
 // UPDATE
 export async function updateCustomer(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.customers.update");
+
     const parsed = CustomerUpdateSchema.safeParse(input);
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
@@ -136,6 +139,8 @@ export async function deleteCustomer(
   id: number
 ): Promise<Result<{ message: string }>> {
   try {
+    await requirePermission("master.customers.delete");
+
     await prisma.customer.delete({ where: { id } });
     await revalidateMasterCustomers();
     return ok({ message: "Customer deleted" });

@@ -3,9 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { ok, err, type Result } from "@/lib/result";
 import { revalidateTripSheet } from "./_utils";
+import { requirePermission } from "@/lib/guard";
 
 export async function createTripSheet(input: any): Promise<Result<any>> {
   try {
+    await requirePermission("trip_sheet.write");
+
     if (!input.bookId) return err("Booking ID tidak valid");
 
     const tripSheet = await prisma.tripSheet.upsert({
@@ -32,12 +35,13 @@ export async function createTripSheet(input: any): Promise<Result<any>> {
         total: input.total ?? 0,
       },
     });
+
     if (typeof revalidateTripSheet === "function") {
       await revalidateTripSheet();
     }
 
-    return ok();
+    return ok(tripSheet);
   } catch (e: any) {
-    return err(e.message ?? "Gagal membuat trip sheet");
+    return err(e?.message ?? "Gagal membuat trip sheet");
   }
 }

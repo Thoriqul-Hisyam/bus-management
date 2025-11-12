@@ -5,6 +5,7 @@ import { ok, err, type Result } from "@/lib/result";
 import { BusCreateSchema, BusUpdateSchema } from "@/validators/bus";
 import { revalidateMasterBus } from "./_utils";
 import { Prisma } from "@prisma/client";
+import { requirePermission } from "@/lib/guard";
 
 export async function listBus(input?: {
   q?: string;
@@ -38,8 +39,7 @@ export async function listBus(input?: {
     const page = Math.max(Number(input?.page ?? 1), 1);
     const perPage = Math.min(Math.max(Number(input?.perPage ?? 10), 1), 100);
     const sort =
-      input?.sort ??
-      ("name_asc" as NonNullable<typeof input>["sort"]);
+      input?.sort ?? ("name_asc" as NonNullable<typeof input>["sort"]);
     const busTypeId = input?.busTypeId;
 
     const orderBy:
@@ -108,6 +108,8 @@ export async function listBus(input?: {
 
 export async function createBus(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.bus.create");
+
     const parsed = BusCreateSchema.safeParse(input);
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
@@ -133,6 +135,8 @@ export async function createBus(input: unknown): Promise<Result<any>> {
 
 export async function updateBus(input: unknown): Promise<Result<any>> {
   try {
+    await requirePermission("master.bus.update");
+
     const parsed = BusUpdateSchema.safeParse(input);
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
@@ -161,6 +165,8 @@ export async function deleteBus(
   id: number
 ): Promise<Result<{ message: string }>> {
   try {
+    await requirePermission("master.bus.delete");
+
     await prisma.bus.delete({ where: { id } });
     revalidateMasterBus();
     return ok({ message: "Bus deleted" });
