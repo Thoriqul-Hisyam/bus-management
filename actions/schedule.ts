@@ -59,6 +59,11 @@ async function listEmployeeOptionsByPosition(
 async function listAllEmployeeOptions(): Promise<Result<Option[]>> {
   try {
     const rows = await prisma.employee.findMany({
+      where: {
+        position: {
+          name: { not: "superadmin" },
+        },
+      },
       select: {
         id: true,
         fullName: true,
