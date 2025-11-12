@@ -21,6 +21,8 @@ type SortKey =
   | "revenue_asc"
   | "revenue_desc";
 
+type HeaderKey = "bus" | "customer" | "date" | "revenue";
+
 type Row = {
   id: number;
   bus: string;
@@ -50,6 +52,36 @@ export default function ReportRevenuePage() {
   const [dateTo, setDateTo] = useState<string>("");
   useEffect(() => setIsClient(true), []);
 
+  // --- Sort helpers (typed) ---
+  const ascMap: Record<HeaderKey, SortKey> = {
+    bus: "bus_asc",
+    customer: "customer_asc",
+    date: "date_asc",
+    revenue: "revenue_asc",
+  };
+  const descMap: Record<HeaderKey, SortKey> = {
+    bus: "bus_desc",
+    customer: "customer_desc",
+    date: "date_desc",
+    revenue: "revenue_desc",
+  };
+
+  const isHeaderKey = (k: unknown): k is HeaderKey =>
+    k === "bus" || k === "customer" || k === "date" || k === "revenue";
+
+  const toggleSort = (key: HeaderKey) => {
+    setPage(1);
+    setSort((prev) => (prev === ascMap[key] ? descMap[key] : ascMap[key]));
+  };
+
+  const currentSortKey: HeaderKey | undefined = useMemo(() => {
+    if (sort.startsWith("bus")) return "bus";
+    if (sort.startsWith("customer")) return "customer";
+    if (sort.startsWith("date")) return "date";
+    if (sort.startsWith("revenue")) return "revenue";
+    return undefined;
+  }, [sort]);
+
   // 🔹 Fetch Data
   async function fetchData(opts?: { page?: number }) {
     const _page = opts?.page ?? page;
@@ -57,7 +89,7 @@ export default function ReportRevenuePage() {
     try {
       const res = await listSchedules();
       if (res.ok) {
-        let data: Row[] = res.data.rows.map((r) => ({
+        let data: Row[] = res.data.rows.map((r: any) => ({
           id: r.id,
           bus: r.bus,
           customer: r.customer,
@@ -69,8 +101,7 @@ export default function ReportRevenuePage() {
         // Filter Bus (dropdown)
         if (filterBusId !== "all" && filterBusId != null) {
           const selected = busOptions.find((b) => b.value === filterBusId);
-          if (selected?.label)
-            data = data.filter((r) => r.bus === selected.label);
+          if (selected?.label) data = data.filter((r) => r.bus === selected.label);
         }
 
         // Filter tanggal
@@ -88,8 +119,8 @@ export default function ReportRevenuePage() {
           const qLower = q.toLowerCase();
           data = data.filter(
             (r) =>
-              r.bus.toLowerCase().includes(qLower) ||
-              r.customer.toLowerCase().includes(qLower)
+              (r.bus ?? "").toLowerCase().includes(qLower) ||
+              (r.customer ?? "").toLowerCase().includes(qLower)
           );
         }
 
@@ -123,11 +154,13 @@ export default function ReportRevenuePage() {
       if (busRes.ok) setBusOptions(busRes.data);
       await fetchData({ page: 1 });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 🔹 Re-fetch saat filter berubah
   useEffect(() => {
     startTransition(() => void fetchData({ page: 1 }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, filterBusId, dateFrom, dateTo, sort, perPage]);
 
   const startIndex = (page - 1) * perPage;
@@ -166,6 +199,7 @@ export default function ReportRevenuePage() {
 
   const totalRevenue = rows.reduce((sum, r) => sum + r.totalRevenue, 0);
   if (!isClient) return null;
+
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Laporan Pendapatan</h1>
@@ -222,16 +256,12 @@ export default function ReportRevenuePage() {
         columns={columns}
         isLoading={isLoading || isPending}
         startIndex={startIndex}
-        sortKey={sort.split("_")[0]}
+        sortKey={currentSortKey}
         sortDir={sort.endsWith("_asc") ? "asc" : "desc"}
         onHeaderClick={(col) => {
           if (!col.sortable) return;
           const key = col.key;
-          setSort((prev) =>
-            prev.startsWith(key) && prev.endsWith("_asc")
-              ? `${key}_desc`
-              : `${key}_asc`
-          );
+          if (isHeaderKey(key)) toggleSort(key);
         }}
       />
 
