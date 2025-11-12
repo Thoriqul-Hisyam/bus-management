@@ -241,3 +241,4 @@ model TripSheet {
   booking         Booking   @relation(fields: [bookingId], references: [id])
   
   @@map("tripsheet")
+}

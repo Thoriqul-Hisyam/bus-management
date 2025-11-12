@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Swal from "sweetalert2";
 import { z } from "zod";
+import { format } from "date-fns";
+
 import RSelect, { type Option as ROption } from "@/components/shared/rselect";
 
 import {
@@ -39,6 +41,9 @@ const FormSchema = z.object({
 });
 
 export default function NewSchedulePage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [isPending, startTransition] = useTransition();
 
   const [customerOpts, setCustomerOpts] = useState<ROption[]>([]);
@@ -52,6 +57,11 @@ export default function NewSchedulePage() {
     { value: "CANCELLED", label: "CANCELLED" },
   ];
 
+  const now = new Date();
+  const yyyyMMdd = format(now, "yyyy-MM-dd");
+  const defaultStart = `${yyyyMMdd}T05:00`;
+  const defaultEnd = `${yyyyMMdd}T23:59`;
+
   const [form, setForm] = useState({
     customerId: null as number | string | null,
     busId: null as number | string | null,
@@ -63,9 +73,9 @@ export default function NewSchedulePage() {
     driverId: null as number | string | null,
     coDriverId: null as number | string | null,
     salesId: null as number | string | null,
-    rentStartAt: "",
-    rentEndAt: "",
-    pickupAt: "",
+    rentStartAt: defaultStart,
+    rentEndAt: defaultEnd,
+    pickupAt: defaultStart,
     status: "CONFIRMED",
     notes: "",
     dp: "",
@@ -82,7 +92,14 @@ export default function NewSchedulePage() {
         listSalesOptions(),
       ]);
 
-      if (cRes.ok) setCustomerOpts(cRes.data);
+      if (cRes.ok) {
+        console.log(cRes);
+        const options = cRes.data.map((c: any) => ({
+          value: c.id,
+          label: `${c.label} - ${c.travel}`, // sesuaikan property dari API-mu
+        }));
+        setCustomerOpts(options);
+      }
       if (bRes.ok) setBusOpts(bRes.data);
       if (dRes.ok) setDriverOpts(dRes.data);
       if (cdRes.ok) setCoDriverOpts(cdRes.data);
@@ -109,7 +126,11 @@ export default function NewSchedulePage() {
     });
 
     if (!parsed.success) {
-      Swal.fire("Gagal", parsed.error.issues[0]?.message ?? "Input tidak valid", "error");
+      Swal.fire(
+        "Gagal",
+        parsed.error.issues[0]?.message ?? "Input tidak valid",
+        "error"
+      );
       return;
     }
 
@@ -118,7 +139,9 @@ export default function NewSchedulePage() {
         ...parsed.data,
         rentStartAt: new Date(parsed.data.rentStartAt),
         rentEndAt: new Date(parsed.data.rentEndAt),
-        pickupAt: parsed.data.pickupAt ? new Date(parsed.data.pickupAt) : undefined,
+        pickupAt: parsed.data.pickupAt
+          ? new Date(parsed.data.pickupAt)
+          : undefined,
       });
       if (res.ok) {
         Swal.fire("Berhasil", "Jadwal berhasil ditambahkan", "success");
@@ -128,6 +151,8 @@ export default function NewSchedulePage() {
       }
     });
   };
+
+  if (!mounted) return null;
 
   return (
     <main className="p-6">
@@ -168,7 +193,17 @@ export default function NewSchedulePage() {
               <Input
                 type="datetime-local"
                 value={form.rentStartAt}
-                onChange={(e) => setForm((s) => ({ ...s, rentStartAt: e.target.value }))}
+                onChange={(e) => {
+                  const newStart = e.target.value;
+                  setForm((s) => ({
+                    ...s,
+                    rentStartAt: newStart,
+                    pickupAt:
+                      !s.pickupAt || s.pickupAt === s.rentStartAt
+                        ? newStart
+                        : s.pickupAt,
+                  }));
+                }}
               />
             </div>
             <div>
@@ -176,25 +211,35 @@ export default function NewSchedulePage() {
               <Input
                 type="datetime-local"
                 value={form.rentEndAt}
-                onChange={(e) => setForm((s) => ({ ...s, rentEndAt: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, rentEndAt: e.target.value }))
+                }
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-muted-foreground">Waktu Penjemputan (opsional)</label>
+            <label className="text-sm text-muted-foreground">
+              Waktu Penjemputan (opsional)
+            </label>
             <Input
               type="datetime-local"
               value={form.pickupAt}
-              onChange={(e) => setForm((s) => ({ ...s, pickupAt: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, pickupAt: e.target.value }))
+              }
             />
           </div>
 
           <div>
-            <label className="text-sm text-muted-foreground">Alamat Penjemputan</label>
+            <label className="text-sm text-muted-foreground">
+              Alamat Penjemputan
+            </label>
             <Input
               value={form.pickupAddress}
-              onChange={(e) => setForm((s) => ({ ...s, pickupAddress: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, pickupAddress: e.target.value }))
+              }
               placeholder="Alamat penjemputan"
             />
           </div>
@@ -203,26 +248,36 @@ export default function NewSchedulePage() {
             <label className="text-sm text-muted-foreground">Tujuan</label>
             <Input
               value={form.destination}
-              onChange={(e) => setForm((s) => ({ ...s, destination: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, destination: e.target.value }))
+              }
               placeholder="Tujuan"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-muted-foreground">Kursi Dipesan</label>
+              <label className="text-sm text-muted-foreground">
+                Kursi Dipesan
+              </label>
               <Input
                 type="number"
                 value={form.seatsBooked}
-                onChange={(e) => setForm((s) => ({ ...s, seatsBooked: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, seatsBooked: e.target.value }))
+                }
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Harga Total</label>
+              <label className="text-sm text-muted-foreground">
+                Harga Total
+              </label>
               <Input
                 type="number"
                 value={form.priceTotal}
-                onChange={(e) => setForm((s) => ({ ...s, priceTotal: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, priceTotal: e.target.value }))
+                }
               />
             </div>
           </div>
@@ -264,15 +319,21 @@ export default function NewSchedulePage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-muted-foreground">Tanggal DP</label>
+              <label className="text-sm text-muted-foreground">
+                Tanggal DP (opsional)
+              </label>
               <Input
                 type="datetime-local"
                 value={form.tanggalDP}
-                onChange={(e) => setForm((s) => ({ ...s, tanggalDP: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, tanggalDP: e.target.value }))
+                }
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Nominal DP</label>
+              <label className="text-sm text-muted-foreground">
+                Nominal DP (opsional)
+              </label>
               <Input
                 type="number"
                 value={form.dp}
@@ -287,7 +348,9 @@ export default function NewSchedulePage() {
               instanceId="new-status"
               options={statusOpts}
               value={form.status}
-              onChange={(v) => setForm((s) => ({ ...s, status: (v as string) || "CONFIRMED" }))}
+              onChange={(v) =>
+                setForm((s) => ({ ...s, status: (v as string) || "CONFIRMED" }))
+              }
             />
           </div>
 
@@ -296,7 +359,9 @@ export default function NewSchedulePage() {
               id="legrest"
               type="checkbox"
               checked={form.legrest}
-              onChange={(e) => setForm((s) => ({ ...s, legrest: e.target.checked }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, legrest: e.target.checked }))
+              }
             />
             <label htmlFor="legrest" className="text-sm">
               Legrest
@@ -307,7 +372,9 @@ export default function NewSchedulePage() {
             <label className="text-sm text-muted-foreground">Catatan</label>
             <Textarea
               value={form.notes}
-              onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, notes: e.target.value }))
+              }
             />
           </div>
 

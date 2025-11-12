@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
+import { format, parse, startOfWeek, getDay, differenceInCalendarDays  } from "date-fns";
 import { id } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import Swal from "sweetalert2";
@@ -45,6 +45,7 @@ export default function ScheduleCheckPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [dateTime, setDateTime] = useState("");
+  const [summaryText, setSummaryText] = useState("");
 
   const getEventColor = (s) => {
     if (s.legrest || s.bantalLeher) {
@@ -133,6 +134,38 @@ export default function ScheduleCheckPage() {
     fetchLibur(currentDate);
   }, [fetchLibur, currentDate]);
 
+  useEffect(() => {
+    if (scheduleList.length === 0) return;
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const usageMap = {};
+
+    scheduleList.forEach((s) => {
+      const start = new Date(s.rentStartAt);
+      const end = new Date(s.rentEndAt);
+
+      const startMonth = new Date(year, month, 1);
+      const endMonth = new Date(year, month + 1, 0);
+
+      const effectiveStart = start < startMonth ? startMonth : start;
+      const effectiveEnd = end > endMonth ? endMonth : end;
+
+      if (effectiveEnd >= startMonth && effectiveStart <= endMonth) {
+        const usedDays = differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
+        usageMap[s.bus] = (usageMap[s.bus] || 0) + usedDays;
+      }
+    });
+
+    const text =
+      Object.entries(usageMap)
+        .map(([bus, days]) => `${bus} : ${days} hari`)
+        .join("  •  ") || "Belum ada jadwal di bulan ini";
+
+    setSummaryText(text);
+  }, [scheduleList, currentDate]);
+
   const dayPropGetter = (date) => {
     const day = getDay(date);
     const dateStr = format(date, "yyyy-MM-dd");
@@ -199,6 +232,27 @@ export default function ScheduleCheckPage() {
 
         <CardContent className="space-y-4">
           {/* tombol view */}
+
+          <div className="overflow-hidden whitespace-nowrap border rounded bg-amber-50 p-2 text-sm font-medium text-amber-800 animate-marquee">
+            <span>{summaryText}</span>
+          </div>
+
+          <style jsx>{`
+            @keyframes marquee {
+              0% {
+                transform: translateX(100%);
+              }
+              100% {
+                transform: translateX(-100%);
+              }
+            }
+            .animate-marquee span {
+              display: inline-block;
+              padding-left: 100%;
+              animation: marquee 20s linear infinite;
+            }
+          `}</style>
+
           <div className="flex gap-2">
             {Object.entries({
               Bulan: Views.MONTH,

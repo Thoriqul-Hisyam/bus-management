@@ -15,11 +15,13 @@ export type Option = { value: number; label: string };
 export async function listCustomerOptions(): Promise<Result<Option[]>> {
   try {
     const rows = await prisma.customer.findMany({
-      select: { id: true, name: true },
+      select: { id: true, name: true, travel: true },
       orderBy: { name: "asc" },
       take: 1000,
     });
-    return ok(rows.map((c) => ({ value: c.id, label: c.name })));
+    return ok(
+      rows.map((c) => ({ value: c.id, label: c.name, travel: c.travel }))
+    );
   } catch (e: any) {
     return err(e.message ?? "Gagal mengambil opsi customer");
   }
@@ -54,6 +56,29 @@ async function listEmployeeOptionsByPosition(
   }
 }
 
+async function listAllEmployeeOptions(): Promise<Result<Option[]>> {
+  try {
+    const rows = await prisma.employee.findMany({
+      select: {
+        id: true,
+        fullName: true,
+        position: { select: { name: true } },
+      },
+      orderBy: { fullName: "asc" },
+      take: 1000,
+    });
+
+    return ok(
+      rows.map((e) => ({
+        value: e.id,
+        label: `${e.fullName}`,
+      }))
+    );
+  } catch (e: any) {
+    return err(e.message ?? "Gagal mengambil semua karyawan");
+  }
+}
+
 export async function listDriverOptions(): Promise<Result<Option[]>> {
   return listEmployeeOptionsByPosition("Driver");
 }
@@ -61,14 +86,20 @@ export async function listCoDriverOptions(): Promise<Result<Option[]>> {
   return listEmployeeOptionsByPosition("Co-Driver");
 }
 export async function listSalesOptions(): Promise<Result<Option[]>> {
-  return listEmployeeOptionsByPosition("Sales");
+  return listAllEmployeeOptions();
 }
 
 type ListParams = {
   q?: string;
   page?: number;
   perPage?: number;
-  sort?: "start_asc" | "start_desc" | "end_asc" | "end_desc" | "created_asc" | "created_desc";
+  sort?:
+    | "start_asc"
+    | "start_desc"
+    | "end_asc"
+    | "end_desc"
+    | "created_asc"
+    | "created_desc";
   busId?: number | null;
   startFrom?: string | null;
   endTo?: string | null;
@@ -77,7 +108,14 @@ type ListParams = {
 export async function listAllSchedules(): Promise<Result<any[]>> {
   try {
     const rows = await prisma.booking.findMany({
-      include: { customer: true, bus: true, driver: true, coDriver: true, sales: true, payments: true },
+      include: {
+        customer: true,
+        bus: true,
+        driver: true,
+        coDriver: true,
+        sales: true,
+        payments: true,
+      },
       orderBy: { id: "desc" },
     });
 
@@ -85,7 +123,8 @@ export async function listAllSchedules(): Promise<Result<any[]>> {
       ...r,
       priceTotal: r.priceTotal ? Number(r.priceTotal) : 0,
       amount: Number(r.payments.find((p) => p.type === "DP")?.amount) || 0,
-      paidAt: r.payments.find((p) => p.type === "DP")?.paidAt?.toISOString() ?? null,
+      paidAt:
+        r.payments.find((p) => p.type === "DP")?.paidAt?.toISOString() ?? null,
       rentStartAt: r.rentStartAt?.toISOString() ?? null,
       rentEndAt: r.rentEndAt?.toISOString() ?? null,
       pickupAt: r.pickupAt?.toISOString() ?? null,
@@ -121,32 +160,49 @@ export async function listSchedules(
 
     let orderBy: Prisma.BookingOrderByWithRelationInput = { createdAt: "desc" };
     switch (params?.sort) {
-      case "start_asc": orderBy = { rentStartAt: "asc" }; break;
-      case "start_desc": orderBy = { rentStartAt: "desc" }; break;
-      case "end_asc": orderBy = { rentEndAt: "asc" }; break;
-      case "end_desc": orderBy = { rentEndAt: "desc" }; break;
-      case "created_asc": orderBy = { createdAt: "asc" }; break;
+      case "start_asc":
+        orderBy = { rentStartAt: "asc" };
+        break;
+      case "start_desc":
+        orderBy = { rentStartAt: "desc" };
+        break;
+      case "end_asc":
+        orderBy = { rentEndAt: "asc" };
+        break;
+      case "end_desc":
+        orderBy = { rentEndAt: "desc" };
+        break;
+      case "created_asc":
+        orderBy = { createdAt: "asc" };
+        break;
       case "created_desc":
-      default: orderBy = { createdAt: "desc" };
+      default:
+        orderBy = { createdAt: "desc" };
     }
 
     const where: Prisma.BookingWhereInput = {
-      ...(q ? {
-        OR: [
-          { pickupAddress: { contains: q } },
-          { destination: { contains: q } },
-          { customer: { is: { name: { contains: q } } } },
-          { bus: { is: { name: { contains: q } } } },
-          { bus: { is: { plateNo: { contains: q } } } },
-          { driver: { is: { fullName: { contains: q } } } },
-          { coDriver: { is: { fullName: { contains: q } } } },
-          { sales: { is: { fullName: { contains: q } } } },
-        ],
-      } : {}),
+      ...(q
+        ? {
+            OR: [
+              { pickupAddress: { contains: q } },
+              { destination: { contains: q } },
+              { customer: { is: { name: { contains: q } } } },
+              { bus: { is: { name: { contains: q } } } },
+              { bus: { is: { plateNo: { contains: q } } } },
+              { driver: { is: { fullName: { contains: q } } } },
+              { coDriver: { is: { fullName: { contains: q } } } },
+              { sales: { is: { fullName: { contains: q } } } },
+            ],
+          }
+        : {}),
       ...(typeof busId === "number" ? { busId } : {}),
       ...(startFrom || endTo
-        ? { AND: [ ...(startFrom ? [{ rentStartAt: { gte: startFrom } }] : []),
-                  ...(endTo ? [{ rentEndAt: { lte: endTo } }] : []), ] }
+        ? {
+            AND: [
+              ...(startFrom ? [{ rentStartAt: { gte: startFrom } }] : []),
+              ...(endTo ? [{ rentEndAt: { lte: endTo } }] : []),
+            ],
+          }
         : {}),
     };
 
@@ -157,7 +213,14 @@ export async function listSchedules(
         orderBy,
         skip: (page - 1) * perPage,
         take: perPage,
-        include: { customer: true, bus: true, driver: true, coDriver: true, sales: true, payments: true },
+        include: {
+          customer: true,
+          bus: true,
+          driver: true,
+          coDriver: true,
+          sales: true,
+          payments: true,
+        },
       }),
     ]);
 
@@ -165,7 +228,8 @@ export async function listSchedules(
       ...r,
       priceTotal: r.priceTotal != null ? Number(r.priceTotal) : 0,
       amount: Number(r.payments.find((p) => p.type === "DP")?.amount) || 0,
-      paidAt: r.payments.find((p) => p.type === "DP")?.paidAt?.toISOString() ?? null,
+      paidAt:
+        r.payments.find((p) => p.type === "DP")?.paidAt?.toISOString() ?? null,
       rentStartAt: r.rentStartAt?.toISOString() ?? null,
       rentEndAt: r.rentEndAt?.toISOString() ?? null,
       pickupAt: r.pickupAt?.toISOString() ?? null,
@@ -191,7 +255,14 @@ export async function listSchedules(
 export async function listSchedulesTripSheet(): Promise<Result<any[]>> {
   try {
     const rows = await prisma.booking.findMany({
-      include: { customer: true, bus: true, driver: true, coDriver: true, sales: true, tripSheets: true },
+      include: {
+        customer: true,
+        bus: true,
+        driver: true,
+        coDriver: true,
+        sales: true,
+        tripSheets: true,
+      },
       orderBy: { id: "desc" },
     });
 
@@ -315,17 +386,19 @@ export async function listTripSheets(input?: {
         busId ? { busId } : {},
         startDate ? { rentStartAt: { gte: startDate } } : {},
         endDate ? { rentEndAt: { lte: endDate } } : {},
-        q ? {
-          OR: [
-            { pickupAddress: { contains: q } },
-            { destination: { contains: q } },
-            { customer: { name: { contains: q } } },
-            { bus: { name: { contains: q } } },
-            { bus: { plateNo: { contains: q } } },
-            { driver: { fullName: { contains: q } } },
-            { coDriver: { fullName: { contains: q } } },
-          ],
-        } : {},
+        q
+          ? {
+              OR: [
+                { pickupAddress: { contains: q } },
+                { destination: { contains: q } },
+                { customer: { name: { contains: q } } },
+                { bus: { name: { contains: q } } },
+                { bus: { plateNo: { contains: q } } },
+                { driver: { fullName: { contains: q } } },
+                { coDriver: { fullName: { contains: q } } },
+              ],
+            }
+          : {},
       ],
     };
 
@@ -348,7 +421,14 @@ export async function listTripSheets(input?: {
     const [rows, total] = await Promise.all([
       prisma.booking.findMany({
         where,
-        include: { customer: true, bus: true, driver: true, coDriver: true, sales: true, tripSheets: true },
+        include: {
+          customer: true,
+          bus: true,
+          driver: true,
+          coDriver: true,
+          sales: true,
+          tripSheets: true,
+        },
         orderBy,
         skip: (page - 1) * perPage,
         take: perPage,
@@ -405,7 +485,13 @@ export async function getScheduleById(id: number): Promise<Result<any>> {
   try {
     const r = await prisma.booking.findUnique({
       where: { id },
-      include: { customer: true, bus: true, driver: true, coDriver: true, sales: true },
+      include: {
+        customer: true,
+        bus: true,
+        driver: true,
+        coDriver: true,
+        sales: true,
+      },
     });
     if (!r) return err("Data booking tidak ditemukan");
 
@@ -436,7 +522,8 @@ export async function createSchedule(input: unknown): Promise<Result<any>> {
     await requirePermission("schedule.input.create");
 
     const parsed = ScheduleCreateSchema.safeParse(input);
-    if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
+    if (!parsed.success)
+      return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
     const data = parsed.data;
 
@@ -489,7 +576,8 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
     await requirePermission("schedule.input.update");
 
     const parsed = ScheduleUpdateSchema.safeParse(input);
-    if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
+    if (!parsed.success)
+      return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
     const data = parsed.data;
 
@@ -525,7 +613,9 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
   }
 }
 
-export async function deleteSchedule(id: number): Promise<Result<{ message: string }>> {
+export async function deleteSchedule(
+  id: number
+): Promise<Result<{ message: string }>> {
   try {
     await requirePermission("schedule.input.delete");
 
