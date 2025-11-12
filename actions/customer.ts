@@ -58,9 +58,9 @@ export async function listCustomers(input?: {
     if (q) {
       whereAnd.push({
         OR: [
-          { name: { contains: q, mode: "insensitive" } },
-          { phone: { contains: q, mode: "insensitive" } },
-          { travel: { contains: q, mode: "insensitive" } },
+          { name: { contains: q } },
+          { phone: { contains: q } },
+          { travel: { contains: q } },
         ],
       });
     }
