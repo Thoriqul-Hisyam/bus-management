@@ -22,10 +22,10 @@ function resolveRequiredPermission(pathname: string): string | null {
 
   // ===== Trip Sheet
   if (/^\/trip_sheet\/create\/[^/]+\/?$/.test(pathname)) return "trip_sheet.write";
-  if (pathname === "/trip_sheet") return "trip_sheet.print";
+  if (pathname === "/trip_sheet") return "trip_sheet.read";
 
   // ===== Repayment & Report (flat)
-  if (pathname === "/repayment") return "finance.repayment.read";
+  if (pathname === "/repayment") return "repayment.read";
   if (pathname === "/report/revenue") return "report.revenue.read";
 
   // ===== Master: Position

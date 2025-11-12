@@ -43,7 +43,7 @@ const MENU_TREE: MenuNode[] = [
  * Daftar permission code (sinkron dengan middleware/guard)
  * - Dashboard: read
  * - schedule.input: CRUD
- * - trip_sheet: print, write (gabungan create+edit)
+ * - trip_sheet: read, print, write (write = create+edit)
  * - repayment: read, update_status
  * - report.revenue: read
  * - master.*: CRUD
@@ -53,33 +53,52 @@ const ALL_CODES = [
   "dashboard.read",
 
   // Schedule Input (CRUD)
-  "schedule.input.read", "schedule.input.create", "schedule.input.update", "schedule.input.delete",
+  "schedule.input.read",
+  "schedule.input.create",
+  "schedule.input.update",
+  "schedule.input.delete",
 
   // Trip Sheet (aksi spesifik)
-  "trip_sheet.print",     // Cetak Surat Jalan
-  "trip_sheet.write",     // Buat/Ubah Surat Jalan (gabungan create + edit)
+  "trip_sheet.read",   // (baru) Lihat Surat Jalan
+  "trip_sheet.print",  // Cetak Surat Jalan
+  "trip_sheet.write",  // Buat/Ubah Surat Jalan (gabungan create + edit)
 
-  // Repayment (aksi spesifik)
-  "finance.repayment.read",           // Lihat
-  "finance.repayment.update_status",  // Ubah Status Pembayaran
+  // Repayment (flat; rename dari finance.repayment.* → repayment.*)
+  "repayment.read",            // Lihat
+  "repayment.update_status",   // Ubah Status Tagihan Pembayaran
 
   // Report Revenue
-  "report.revenue.read",              // Lihat
+  "report.revenue.read",       // Lihat
 
   // Master Bus (CRUD)
-  "master.bus.read", "master.bus.create", "master.bus.update", "master.bus.delete",
+  "master.bus.read",
+  "master.bus.create",
+  "master.bus.update",
+  "master.bus.delete",
 
   // Master Bus Type (CRUD)
-  "master.bus_type.read", "master.bus_type.create", "master.bus_type.update", "master.bus_type.delete",
+  "master.bus_type.read",
+  "master.bus_type.create",
+  "master.bus_type.update",
+  "master.bus_type.delete",
 
   // Master Customers (CRUD)
-  "master.customers.read", "master.customers.create", "master.customers.update", "master.customers.delete",
+  "master.customers.read",
+  "master.customers.create",
+  "master.customers.update",
+  "master.customers.delete",
 
   // Master Employees (CRUD)
-  "master.employees.read", "master.employees.create", "master.employees.update", "master.employees.delete",
+  "master.employees.read",
+  "master.employees.create",
+  "master.employees.update",
+  "master.employees.delete",
 
   // Master Position (CRUD)
-  "master.position.read", "master.position.create", "master.position.update", "master.position.delete",
+  "master.position.read",
+  "master.position.create",
+  "master.position.update",
+  "master.position.delete",
 ];
 
 /**
@@ -117,7 +136,7 @@ const ACTION_LABEL: Record<string, string> = {
 
 /**
  * Pemetaan permission → menu code
- * - finance.repayment.* → menu.repayment (flat)
+ * - repayment.* → menu.repayment (flat)
  * - report.revenue.* → menu.report.revenue (flat)
  * - trip_sheet.* → menu.trip_sheet (flat)
  * - schedule.input.* → menu.schedule.input (flat)
@@ -135,8 +154,8 @@ function menuCodeForPermission(code: string): string {
   if (code.startsWith("schedule.input.")) return "menu.schedule.input";
   if (code.startsWith("trip_sheet.")) return "menu.trip_sheet";
 
-  // repayment (flat)
-  if (code.startsWith("finance.repayment.")) return "menu.repayment";
+  // repayment (flat) — sudah bukan finance.repayment.*
+  if (code.startsWith("repayment.")) return "menu.repayment";
 
   // report.revenue (flat)
   if (code.startsWith("report.revenue.")) return "menu.report.revenue";
