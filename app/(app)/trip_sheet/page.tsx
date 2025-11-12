@@ -4,9 +4,17 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 
-import { listTripSheets, listBusOptions, type TripSheetSort } from "@/actions/schedule";
+import {
+  listTripSheets,
+  listBusOptions,
+  type TripSheetSort,
+} from "@/actions/schedule";
 
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +89,7 @@ export default function TripSheetPage() {
 
   const [filterBusId, setFilterBusId] = useState<number | "all">("all");
   const [filterStart, setFilterStart] = useState<string>(""); // YYYY-MM-DD
-  const [filterEnd, setFilterEnd] = useState<string>("");     // YYYY-MM-DD
+  const [filterEnd, setFilterEnd] = useState<string>(""); // YYYY-MM-DD
 
   // data state
   const [rows, setRows] = useState<Row[]>([]);
@@ -90,6 +98,8 @@ export default function TripSheetPage() {
 
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
 
   // === Fetchers ===
   async function fetchData(opts?: {
@@ -206,7 +216,8 @@ export default function TripSheetPage() {
         label: "Price",
         sortable: true,
         className: "whitespace-nowrap text-right",
-        render: (r) => `Rp ${Number(r.priceTotal ?? 0).toLocaleString("id-ID")}`,
+        render: (r) =>
+          `Rp ${Number(r.priceTotal ?? 0).toLocaleString("id-ID")}`,
       },
       {
         key: "rentStartAt",
@@ -267,15 +278,21 @@ export default function TripSheetPage() {
   );
 
   // === Mapping sort untuk DataTable header indicator ===
-  const sortKey: SortKey | undefined =
-    sort.startsWith("customer") ? "customer" :
-    sort.startsWith("bus") ? "bus" :
-    sort.startsWith("pickup") ? "pickup" :
-    sort.startsWith("destination") ? "destination" :
-    sort.startsWith("price") ? "price" :
-    sort.startsWith("start") ? "rentStartAt" :
-    sort.startsWith("end") ? "rentEndAt" :
-    undefined;
+  const sortKey: SortKey | undefined = sort.startsWith("customer")
+    ? "customer"
+    : sort.startsWith("bus")
+    ? "bus"
+    : sort.startsWith("pickup")
+    ? "pickup"
+    : sort.startsWith("destination")
+    ? "destination"
+    : sort.startsWith("price")
+    ? "price"
+    : sort.startsWith("start")
+    ? "rentStartAt"
+    : sort.startsWith("end")
+    ? "rentEndAt"
+    : undefined;
 
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
@@ -305,8 +322,10 @@ export default function TripSheetPage() {
     if (!canPrint) return; // hard guard (sekadar berjaga)
     const w = window.open("", "_blank");
     if (!w) return;
-    const rupiah = (n: number | null | undefined) => `Rp ${(Number(n ?? 0)).toLocaleString("id-ID")}`;
-    const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("id-ID") : "-");
+    const rupiah = (n: number | null | undefined) =>
+      `Rp ${Number(n ?? 0).toLocaleString("id-ID")}`;
+    const fmtDate = (iso: string | null) =>
+      iso ? new Date(iso).toLocaleDateString("id-ID") : "-";
 
     w.document.write(`
       <html>
@@ -342,15 +361,35 @@ export default function TripSheetPage() {
           </table>
 
           <table>
-            <tr><td>Armada</td><td>${s.bus ?? "-"}</td><td>Tujuan / Rute</td><td>${s.destination ?? "-"}</td></tr>
-            <tr><td>Nopol</td><td>${s.plateNo ?? "-"}</td><td>Sangu</td><td>${rupiah(s.sangu)}</td></tr>
-            <tr><td>Driver</td><td>${s.driver ?? "-"}</td><td>Tagihan</td><td>${rupiah(s.priceTotal)}</td></tr>
-            <tr><td>Co Driver</td><td>${s.coDriver ?? "-"}</td><td>Premi Driver</td><td>${rupiah(s.premiDriver)}</td></tr>
-            <tr><td>Panitia</td><td>${s.customer ?? "-"}</td><td>Premi Co Driver</td><td>${rupiah(s.premiCoDriver)}</td></tr>
-            <tr><td>Tgl. Berangkat</td><td>${fmtDate(s.rentStartAt)}</td><td>UM Driver</td><td>${rupiah(s.umDriver)}</td></tr>
-            <tr><td>Tgl. Pulang</td><td>${fmtDate(s.rentEndAt)}</td><td>UM Co Driver</td><td>${rupiah(s.umCoDriver)}</td></tr>
-            <tr><td>Penjemputan</td><td>${s.pickupAddress ?? "-"}</td><td>BBM</td><td>${rupiah(s.bbm)}</td></tr>
-            <tr><td>Keterangan</td><td>${s.description ?? "-"}</td><td>Total</td><td>${rupiah(s.total)}</td></tr>
+            <tr><td>Armada</td><td>${
+              s.bus ?? "-"
+            }</td><td>Tujuan / Rute</td><td>${s.destination ?? "-"}</td></tr>
+            <tr><td>Nopol</td><td>${
+              s.plateNo ?? "-"
+            }</td><td>Sangu</td><td>${rupiah(s.sangu)}</td></tr>
+            <tr><td>Driver</td><td>${
+              s.driver ?? "-"
+            }</td><td>Tagihan</td><td>${rupiah(s.priceTotal)}</td></tr>
+            <tr><td>Co Driver</td><td>${
+              s.coDriver ?? "-"
+            }</td><td>Premi Driver</td><td>${rupiah(s.premiDriver)}</td></tr>
+            <tr><td>Panitia</td><td>${
+              s.customer ?? "-"
+            }</td><td>Premi Co Driver</td><td>${rupiah(
+      s.premiCoDriver
+    )}</td></tr>
+            <tr><td>Tgl. Berangkat</td><td>${fmtDate(
+              s.rentStartAt
+            )}</td><td>UM Driver</td><td>${rupiah(s.umDriver)}</td></tr>
+            <tr><td>Tgl. Pulang</td><td>${fmtDate(
+              s.rentEndAt
+            )}</td><td>UM Co Driver</td><td>${rupiah(s.umCoDriver)}</td></tr>
+            <tr><td>Penjemputan</td><td>${
+              s.pickupAddress ?? "-"
+            }</td><td>BBM</td><td>${rupiah(s.bbm)}</td></tr>
+            <tr><td>Keterangan</td><td>${
+              s.description ?? "-"
+            }</td><td>Total</td><td>${rupiah(s.total)}</td></tr>
           </table>
 
           <p class="note">
@@ -371,7 +410,7 @@ export default function TripSheetPage() {
     `);
     w.document.close();
   }
-
+  if (!isClient) return null;
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">List Surat Jalan</h1>
@@ -394,20 +433,26 @@ export default function TripSheetPage() {
 
         {/* Filter Armada */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Armada</span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Armada
+          </span>
           <div className="min-w-48 w-48">
             <RSelect
               instanceId="trip-bus-filter"
               options={[{ value: "all", label: "Semua Armada" }, ...busOptions]}
               value={filterBusId}
-              onChange={(v) => setFilterBusId(v === "all" || v == null ? "all" : Number(v))}
+              onChange={(v) =>
+                setFilterBusId(v === "all" || v == null ? "all" : Number(v))
+              }
             />
           </div>
         </div>
 
         {/* Filter tanggal mulai */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Mulai</span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Mulai
+          </span>
           <Input
             type="date"
             value={filterStart}
@@ -417,7 +462,9 @@ export default function TripSheetPage() {
 
         {/* Filter tanggal selesai */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Selesai</span>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Selesai
+          </span>
           <Input
             type="date"
             value={filterEnd}

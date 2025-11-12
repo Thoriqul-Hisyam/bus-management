@@ -77,6 +77,8 @@ export default function BusPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [deleting, setDeleting] = useState<Row | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
 
   const typeOptions: ROption[] = useMemo(
     () => types.map((t) => ({ value: t.id, label: t.name })),
@@ -221,7 +223,7 @@ export default function BusPage() {
       ? "capacity"
       : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
-
+  if (!isClient) return null;
   return (
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Master Data Armada</h1>

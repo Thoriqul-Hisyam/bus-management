@@ -38,7 +38,9 @@ export async function listBusOptions(): Promise<Result<Option[]>> {
   }
 }
 
-async function listEmployeeOptionsByPosition(positionName: string): Promise<Result<Option[]>> {
+async function listEmployeeOptionsByPosition(
+  positionName: string
+): Promise<Result<Option[]>> {
   try {
     const rows = await prisma.employee.findMany({
       where: { position: { is: { name: positionName } } },
@@ -112,7 +114,9 @@ export async function listSchedules(
     const q = (params?.q ?? "").trim();
     const busId = params?.busId ? Number(params.busId) : undefined;
 
-    const startFrom = params?.startFrom ? new Date(params.startFrom) : undefined;
+    const startFrom = params?.startFrom
+      ? new Date(params.startFrom)
+      : undefined;
     const endTo = params?.endTo ? new Date(params.endTo) : undefined;
 
     let orderBy: Prisma.BookingOrderByWithRelationInput = { createdAt: "desc" };
@@ -168,6 +172,8 @@ export async function listSchedules(
       createdAt: r.createdAt?.toISOString() ?? null,
       updatedAt: r.updatedAt?.toISOString() ?? null,
       customer: r.customer?.name ?? null,
+      customerTravel: r.customer?.travel ?? null,
+      customerPhone: r.customer?.phone ?? null,
       bus: r.bus?.name ?? null,
       plateNo: r.bus?.plateNo ?? null,
       driver: r.driver?.fullName ?? null,
@@ -192,13 +198,27 @@ export async function listSchedulesTripSheet(): Promise<Result<any[]>> {
     const safeRows = rows.map((r) => ({
       ...r,
       tripId: r.tripSheets?.[0]?.id ?? null,
-      sangu: r.tripSheets?.[0]?.sangu != null ? Number(r.tripSheets[0].sangu) : null,
-      premiDriver: r.tripSheets?.[0]?.premiDriver != null ? Number(r.tripSheets[0].premiDriver) : null,
-      premiCoDriver: r.tripSheets?.[0]?.premiCoDriver != null ? Number(r.tripSheets[0].premiCoDriver) : null,
-      umDriver: r.tripSheets?.[0]?.umDriver != null ? Number(r.tripSheets[0].umDriver) : null,
-      umCoDriver: r.tripSheets?.[0]?.umCoDriver != null ? Number(r.tripSheets[0].umCoDriver) : null,
+      sangu:
+        r.tripSheets?.[0]?.sangu != null ? Number(r.tripSheets[0].sangu) : null,
+      premiDriver:
+        r.tripSheets?.[0]?.premiDriver != null
+          ? Number(r.tripSheets[0].premiDriver)
+          : null,
+      premiCoDriver:
+        r.tripSheets?.[0]?.premiCoDriver != null
+          ? Number(r.tripSheets[0].premiCoDriver)
+          : null,
+      umDriver:
+        r.tripSheets?.[0]?.umDriver != null
+          ? Number(r.tripSheets[0].umDriver)
+          : null,
+      umCoDriver:
+        r.tripSheets?.[0]?.umCoDriver != null
+          ? Number(r.tripSheets[0].umCoDriver)
+          : null,
       bbm: r.tripSheets?.[0]?.bbm != null ? Number(r.tripSheets[0].bbm) : null,
-      total: r.tripSheets?.[0]?.total != null ? Number(r.tripSheets[0].total) : null,
+      total:
+        r.tripSheets?.[0]?.total != null ? Number(r.tripSheets[0].total) : null,
       description: r.tripSheets?.[0]?.description ?? null,
       priceTotal: r.priceTotal != null ? Number(r.priceTotal) : 0,
       rentStartAt: r.rentStartAt?.toISOString() ?? null,
@@ -222,13 +242,20 @@ export async function listSchedulesTripSheet(): Promise<Result<any[]>> {
 }
 
 export type TripSheetSort =
-  | "customer_asc" | "customer_desc"
-  | "bus_asc" | "bus_desc"
-  | "pickup_asc" | "pickup_desc"
-  | "destination_asc" | "destination_desc"
-  | "price_asc" | "price_desc"
-  | "start_asc" | "start_desc"
-  | "end_asc" | "end_desc";
+  | "customer_asc"
+  | "customer_desc"
+  | "bus_asc"
+  | "bus_desc"
+  | "pickup_asc"
+  | "pickup_desc"
+  | "destination_asc"
+  | "destination_desc"
+  | "price_asc"
+  | "price_desc"
+  | "start_asc"
+  | "start_desc"
+  | "end_asc"
+  | "end_desc";
 
 export async function listTripSheets(input?: {
   q?: string;
@@ -236,37 +263,46 @@ export async function listTripSheets(input?: {
   perPage?: number;
   sort?: TripSheetSort;
   busId?: number;
-  start?: string | null;
-  end?: string | null;
-}): Promise<Result<{ rows: Array<{
-  id: number;
-  status: BookingStatus;
-  customer: string | null;
-  bus: string | null;
-  plateNo: string | null;
-  pickupAddress: string | null;
-  destination: string | null;
-  priceTotal: number;
-  rentStartAt: string | null;
-  rentEndAt: string | null;
-  driver: string | null;
-  coDriver: string | null;
-  tripId: number | null;
-  sangu: number | null;
-  premiDriver: number | null;
-  premiCoDriver: number | null;
-  umDriver: number | null;
-  umCoDriver: number | null;
-  bbm: number | null;
-  total: number | null;
-  description: string | null;
-}>; total: number;}>> {
+  start?: string | null; // YYYY-MM-DD
+  end?: string | null; // YYYY-MM-DD
+}): Promise<
+  Result<{
+    rows: Array<{
+      id: number;
+      status: BookingStatus;
+      customer: string | null;
+      bus: string | null;
+      plateNo: string | null;
+      pickupAddress: string | null;
+      destination: string | null;
+      priceTotal: number;
+      rentStartAt: string | null;
+      rentEndAt: string | null;
+      driver: string | null;
+      coDriver: string | null;
+      tripId: number | null;
+      // trip sheet money fields (opsional di print)
+      sangu: number | null;
+      premiDriver: number | null;
+      premiCoDriver: number | null;
+      umDriver: number | null;
+      umCoDriver: number | null;
+      bbm: number | null;
+      total: number | null;
+      description: string | null;
+    }>;
+    total: number;
+  }>
+> {
   try {
     const q = input?.q?.trim() ?? "";
     const page = Math.max(Number(input?.page ?? 1), 1);
     const perPage = Math.min(Math.max(Number(input?.perPage ?? 10), 1), 100);
     const sort = (input?.sort ?? "start_desc") as TripSheetSort;
-    const busId = typeof input?.busId === "number" && Number.isFinite(input.busId) ? input.busId : undefined;
+    const busId =
+      typeof input?.busId === "number" && Number.isFinite(input.busId)
+        ? input.busId
+        : undefined;
 
     const startDate = input?.start ? new Date(input.start) : undefined;
     const endDate = input?.end ? new Date(input.end) : undefined;
@@ -295,13 +331,19 @@ export async function listTripSheets(input?: {
 
     const [key, dir] = sort.split("_") as [string, "asc" | "desc"];
     const orderBy: Prisma.BookingOrderByWithRelationInput =
-      key === "customer" ? { customer: { name: dir } } :
-      key === "bus" ? { bus: { name: dir } } :
-      key === "pickup" ? { pickupAddress: dir } :
-      key === "destination" ? { destination: dir } :
-      key === "price" ? { priceTotal: dir } :
-      key === "start" ? { rentStartAt: dir } :
-      { rentEndAt: dir };
+      key === "customer"
+        ? { customer: { name: dir } }
+        : key === "bus"
+        ? { bus: { name: dir } }
+        : key === "pickup"
+        ? { pickupAddress: dir }
+        : key === "destination"
+        ? { destination: dir }
+        : key === "price"
+        ? { priceTotal: dir }
+        : key === "start"
+        ? { rentStartAt: dir }
+        : { rentEndAt: dir };
 
     const [rows, total] = await Promise.all([
       prisma.booking.findMany({
@@ -328,13 +370,28 @@ export async function listTripSheets(input?: {
       driver: r.driver?.fullName ?? null,
       coDriver: r.coDriver?.fullName ?? null,
       tripId: r.tripSheets?.[0]?.id ?? null,
-      sangu: r.tripSheets?.[0]?.sangu != null ? Number(r.tripSheets[0].sangu) : null,
-      premiDriver: r.tripSheets?.[0]?.premiDriver != null ? Number(r.tripSheets[0].premiDriver) : null,
-      premiCoDriver: r.tripSheets?.[0]?.premiCoDriver != null ? Number(r.tripSheets[0].premiCoDriver) : null,
-      umDriver: r.tripSheets?.[0]?.umDriver != null ? Number(r.tripSheets[0].umDriver) : null,
-      umCoDriver: r.tripSheets?.[0]?.umCoDriver != null ? Number(r.tripSheets[0].umCoDriver) : null,
+      // trip sheet money fields
+      sangu:
+        r.tripSheets?.[0]?.sangu != null ? Number(r.tripSheets[0].sangu) : null,
+      premiDriver:
+        r.tripSheets?.[0]?.premiDriver != null
+          ? Number(r.tripSheets[0].premiDriver)
+          : null,
+      premiCoDriver:
+        r.tripSheets?.[0]?.premiCoDriver != null
+          ? Number(r.tripSheets[0].premiCoDriver)
+          : null,
+      umDriver:
+        r.tripSheets?.[0]?.umDriver != null
+          ? Number(r.tripSheets[0].umDriver)
+          : null,
+      umCoDriver:
+        r.tripSheets?.[0]?.umCoDriver != null
+          ? Number(r.tripSheets[0].umCoDriver)
+          : null,
       bbm: r.tripSheets?.[0]?.bbm != null ? Number(r.tripSheets[0].bbm) : null,
-      total: r.tripSheets?.[0]?.total != null ? Number(r.tripSheets[0].total) : null,
+      total:
+        r.tripSheets?.[0]?.total != null ? Number(r.tripSheets[0].total) : null,
       description: r.tripSheets?.[0]?.description ?? null,
     }));
 

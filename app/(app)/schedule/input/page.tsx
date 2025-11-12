@@ -35,6 +35,8 @@ type Row = {
   bus: string | null;
   plateNo: string | null;
   pickupAddress: string | null;
+  customerTravel: string | null;
+  customerPhone: string | null;
   destination: string | null;
   seatsBooked: number | null;
   amount: number; // DP
@@ -99,17 +101,14 @@ export default function ScheduleInputPage() {
 
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
 
   useEffect(() => {
     (async () => {
       const res = await listBusOptions();
       if (res.ok) {
-        setBusOptions(
-          res.data.map((b: any) => ({
-            value: b.value ?? b.id, // jaga-jaga dua format
-            label: b.label ?? b.name ?? `Bus ${b.id}`,
-          }))
-        );
+        setBusOptions(res.data);
       } else {
         console.error(res.error);
       }
@@ -184,7 +183,23 @@ export default function ScheduleInputPage() {
         className: "w-14 text-center",
         render: (_r, i) => i + 1,
       },
-      { key: "customer", label: "Customer", render: (r) => r.customer ?? "—" },
+      {
+        key: "customer",
+        label: "Customer",
+        render: (r) => (
+          <div className="flex flex-col">
+            <span className="font-medium">{r.customer ?? "—"}</span>
+            <span className="text-xs text-muted-foreground">
+              {r.customerTravel ?? "-"}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: "customerPhone",
+        label: "No. Customer",
+        render: (r) => r.customerPhone ?? "—",
+      },
       {
         key: "bus",
         label: "Armada",
@@ -207,14 +222,43 @@ export default function ScheduleInputPage() {
         label: "Penjemputan",
         render: (r) => r.pickupAddress ?? "—",
       },
-      { key: "destination", label: "Tujuan", render: (r) => r.destination ?? "—" },
+      {
+        key: "pickupAt",
+        label: "Tgl Penjemputan",
+        render: (r) => {
+          if (!r.pickupAt) return <span>—</span>;
+
+          const date = new Date(r.pickupAt);
+          const tanggal = date.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          const jam = `${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}`;
+          return (
+            <div className="flex flex-col text-sm leading-tight text-center">
+              <span>{tanggal}</span>
+              <span className="text-muted-foreground text-center">{jam}</span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "destination",
+        label: "Tujuan",
+        render: (r) => r.destination ?? "—",
+      },
       {
         key: "amount",
         label: "DP / Total",
         render: (r) => (
           <div className="flex flex-col">
-            <span className="text-xs">DP: Rp {r.amount.toLocaleString("id-ID")}</span>
-            <span className="font-medium">Rp {r.priceTotal.toLocaleString("id-ID")}</span>
+            <span className="text-xs">DP: Rp {r.amount.toLocaleString()}</span>
+            <span className="font-medium">
+              Rp {r.priceTotal.toLocaleString()}
+            </span>
           </div>
         ),
       },
@@ -222,14 +266,51 @@ export default function ScheduleInputPage() {
         key: "rentStartAt",
         label: "Mulai",
         sortable: true,
-        render: (r) => fmtDate(r.rentStartAt),
+        render: (r) => {
+          if (!r.rentStartAt) return <span>—</span>;
+
+          const date = new Date(r.rentStartAt);
+          const tanggal = date.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          const jam = `${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}`;
+          return (
+            <div className="flex flex-col text-sm leading-tight text-center">
+              <span>{tanggal}</span>
+              <span className="text-muted-foreground text-center">{jam}</span>
+            </div>
+          );
+        },
       },
       {
         key: "rentEndAt",
         label: "Selesai",
         sortable: true,
-        render: (r) => fmtDate(r.rentEndAt),
+        render: (r) => {
+          if (!r.rentEndAt) return <span>—</span>;
+
+          const date = new Date(r.rentEndAt);
+          const tanggal = date.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          const jam = `${String(date.getHours()).padStart(2, "0")}:${String(
+            date.getMinutes()
+          ).padStart(2, "0")}`;
+          return (
+            <div className="flex flex-col text-sm leading-tight text-center">
+              <span>{tanggal}</span>
+              <span className="text-muted-foreground text-center">{jam}</span>
+            </div>
+          );
+        },
       },
+
       {
         key: "crew",
         label: "Crew",
@@ -289,10 +370,13 @@ export default function ScheduleInputPage() {
     [page, perPage, canUpdate, canDelete]
   );
 
-  const sortKey =
-    sort.startsWith("start") ? "rentStartAt" : sort.startsWith("end") ? "rentEndAt" : undefined;
+  const sortKey = sort.startsWith("start")
+    ? "rentStartAt"
+    : sort.startsWith("end")
+    ? "rentEndAt"
+    : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
-
+  if (!isClient) return null;
   return (
     <main className="p-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
