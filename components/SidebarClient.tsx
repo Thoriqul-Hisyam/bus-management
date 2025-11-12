@@ -60,13 +60,13 @@ export default function Sidebar({
         </Link>
       )}
 
-      {(has("trip_sheet.print") || has("trip_sheet.write")) && (
+      {(has("trip_sheet.print") || has("trip_sheet.read")) && (
         <Link href="/trip_sheet" className={linkClass("/trip_sheet")}>
           <FaClipboardList /> Surat Jalan
         </Link>
       )}
 
-      {has("finance.repayment.read") && (
+      {has("repayment.read") && (
         <Link href="/repayment" className={linkClass("/repayment")}>
           <FaMoneyBillWave /> Tagihan Pembayaran
         </Link>
