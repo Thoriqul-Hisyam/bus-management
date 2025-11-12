@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 
 import RSelect, { type Option as ROption } from "@/components/shared/rselect";
 import { Controller } from "react-hook-form";
+import { useHasPerm } from "@/components/SessionProvider";
 
 type SortKey =
   | "name_asc"
@@ -55,6 +56,11 @@ const FormSchema = z.object({
 type FormValues = z.infer<typeof FormSchema>;
 
 export default function BusPage() {
+  // === Permission checks (UI)
+  const canCreate = useHasPerm("master.bus.create");
+  const canUpdate = useHasPerm("master.bus.update");
+  const canDelete = useHasPerm("master.bus.delete");
+
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("name_asc");
   const [page, setPage] = useState(1);
@@ -141,8 +147,8 @@ export default function BusPage() {
 
   const startIndex = (page - 1) * perPage;
 
-  const columns: DataTableColumn<Row>[] = useMemo(
-    () => [
+  const columns: DataTableColumn<Row>[] = useMemo(() => {
+    const cols: DataTableColumn<Row>[] = [
       {
         key: "no",
         label: "No.",
@@ -174,40 +180,46 @@ export default function BusPage() {
         className: "w-24 text-right",
         render: (r) => r.capacity,
       },
-      {
+    ];
+
+    // tampilkan kolom aksi hanya jika punya salah satu izin update/delete
+    if (canUpdate || canDelete) {
+      cols.push({
         key: "actions",
         label: "Aksi",
         className: "w-24 text-right",
         render: (r) => {
-          const items = [
-            { key: "edit", label: "Edit" },
-            { key: "delete", label: "Hapus", destructive: true },
-          ] as const;
+          const items: { key: string; label: string; destructive?: boolean }[] = [];
+          if (canUpdate) items.push({ key: "edit", label: "Edit" });
+          if (canDelete) items.push({ key: "delete", label: "Hapus", destructive: true });
+          if (items.length === 0) return null;
+
           return (
             <ActionDropdown
-              items={items as any}
+              items={items}
               onClickItem={(key) => {
-                if (key === "edit") setEditRow(r);
-                else if (key === "delete") setDeleting(r);
+                if (key === "edit" && canUpdate) setEditRow(r);
+                else if (key === "delete" && canDelete) setDeleting(r);
               }}
             />
           );
         },
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, perPage]
-  );
+      });
+    }
 
-  const sortKey = sort.startsWith("name")
-    ? "name"
-    : sort.startsWith("plate")
-    ? "plateNo"
-    : sort.startsWith("type")
-    ? "busType"
-    : sort.startsWith("capacity")
-    ? "capacity"
-    : undefined;
+    return cols;
+  }, [canUpdate, canDelete, page, perPage]);
+
+  const sortKey =
+    sort.startsWith("name")
+      ? "name"
+      : sort.startsWith("plate")
+      ? "plateNo"
+      : sort.startsWith("type")
+      ? "busType"
+      : sort.startsWith("capacity")
+      ? "capacity"
+      : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
@@ -229,7 +241,7 @@ export default function BusPage() {
           ) : null}
         </div>
 
-        {/* Filter Tipe Armada pakai react-select */}
+        {/* Filter Tipe Armada */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Filter Tipe</span>
           <div className="min-w-48 w-48">
@@ -239,13 +251,13 @@ export default function BusPage() {
               onChange={(v) =>
                 setFilterType(v === "all" || v === null ? "all" : Number(v))
               }
-              // searchable & clearable sudah default true di RSelect
             />
           </div>
         </div>
 
         <div className="flex items-center sm:justify-end">
-          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
+          {/* tombol tambah hanya jika punya izin create */}
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>}
         </div>
       </div>
 
@@ -302,7 +314,7 @@ export default function BusPage() {
         defaultValues={{
           name: "",
           plateNo: "",
-          busTypeId: typeOptions[0]?.value as number | undefined,
+          busTypeId: (typeOptions[0]?.value as number | undefined) ?? undefined,
           capacity: 0,
         }}
         onSubmit={async (values) => {

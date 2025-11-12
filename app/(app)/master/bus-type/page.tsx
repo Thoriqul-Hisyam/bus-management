@@ -20,10 +20,14 @@ import Pagination from "@/components/shared/pagination";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useHasPerm } from "@/components/SessionProvider";
 
 type Row = { id: number; name: string };
-
 type SortKey = "name_asc" | "name_desc" | "id_asc" | "id_desc";
+
+const PERM_CREATE = "master.bus_type.create";
+const PERM_UPDATE = "master.bus_type.update";
+const PERM_DELETE = "master.bus_type.delete";
 
 const FormSchema = z.object({
   name: z.string().min(1, "Nama tipe armada wajib diisi"),
@@ -31,6 +35,11 @@ const FormSchema = z.object({
 type FormValues = z.infer<typeof FormSchema>;
 
 export default function BusTypePage() {
+  // === Permission checks (UI)
+  const canCreate = useHasPerm(PERM_CREATE);
+  const canUpdate = useHasPerm(PERM_UPDATE);
+  const canDelete = useHasPerm(PERM_DELETE);
+
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("name_asc");
   const [page, setPage] = useState(1);
@@ -98,8 +107,9 @@ export default function BusTypePage() {
   }, [q]);
 
   const startIndex = (page - 1) * perPage;
-  const columns: DataTableColumn<Row>[] = useMemo(
-    () => [
+
+  const columns: DataTableColumn<Row>[] = useMemo(() => {
+    const base: DataTableColumn<Row>[] = [
       {
         key: "no",
         label: "No.",
@@ -112,37 +122,40 @@ export default function BusTypePage() {
         sortable: true,
         render: (r) => <span className="font-medium">{r.name}</span>,
       },
-      {
+    ];
+
+    // tampilkan kolom Aksi hanya jika punya salah satu izin update/delete
+    if (canUpdate || canDelete) {
+      base.push({
         key: "actions",
         label: "Aksi",
         className: "w-24 text-right",
         render: (r) => {
-          const items = [
-            { key: "edit", label: "Edit" },
-            { key: "delete", label: "Hapus", destructive: true },
-          ] as const;
+          const items: { key: string; label: string; destructive?: boolean }[] =
+            [];
+          if (canUpdate) items.push({ key: "edit", label: "Edit" });
+          if (canDelete)
+            items.push({ key: "delete", label: "Hapus", destructive: true });
+          if (items.length === 0) return null;
 
           return (
             <ActionDropdown
-              items={items as any}
+              items={items}
               onClickItem={(key) => {
-                if (key === "edit") setEditRow(r);
-                else if (key === "delete") setDeleting(r);
+                if (key === "edit" && canUpdate) setEditRow(r);
+                else if (key === "delete" && canDelete) setDeleting(r);
               }}
             />
           );
         },
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, perPage]
-  );
+      });
+    }
 
-  const sortKey = sort.startsWith("name")
-    ? "name"
-    : sort.startsWith("id")
-    ? "id"
-    : undefined;
+    return base;
+  }, [canUpdate, canDelete, page, perPage]);
+
+  const sortKey =
+    sort.startsWith("name") ? "name" : sort.startsWith("id") ? "id" : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
@@ -164,7 +177,8 @@ export default function BusTypePage() {
         </div>
 
         <div className="flex items-center sm:ml-auto">
-          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
+          {/* tombol tambah hanya jika punya izin create */}
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>}
         </div>
       </div>
 
@@ -178,7 +192,9 @@ export default function BusTypePage() {
         onHeaderClick={(col) => {
           if (col.key === "name") {
             setPage(1);
-            setSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"));
+            setSort((prev) =>
+              prev === "name_asc" ? "name_desc" : "name_asc"
+            );
           }
         }}
       />
@@ -196,6 +212,7 @@ export default function BusTypePage() {
         />
       </div>
 
+      {/* Create */}
       <CrudModal<FormValues>
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -228,6 +245,7 @@ export default function BusTypePage() {
         )}
       />
 
+      {/* Edit */}
       <CrudModal<FormValues>
         open={!!editRow}
         onOpenChange={(v) => !v && setEditRow(null)}
@@ -261,6 +279,7 @@ export default function BusTypePage() {
         )}
       />
 
+      {/* Delete */}
       <DeleteConfirm
         open={!!deleting}
         title="Yakin ingin menghapus?"

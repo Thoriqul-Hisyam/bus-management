@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import PasswordField from "@/components/shared/password-field";
 import RSelect, { type Option } from "@/components/shared/rselect";
+import { useHasPerm } from "@/components/SessionProvider";
 
 import {
   CreateFormSchema,
@@ -44,6 +45,12 @@ type EmployeeRow = {
 };
 
 export default function EmployeesPage() {
+  // === Permission checks (UI)
+  const canCreate = useHasPerm("master.employees.create");
+  const canUpdate = useHasPerm("master.employees.update");
+  const canDelete = useHasPerm("master.employees.delete");
+
+
   // UI state
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("name_asc");
@@ -137,8 +144,9 @@ export default function EmployeesPage() {
 
   const startIndex = (page - 1) * perPage;
 
-  const columns: DataTableColumn<EmployeeRow>[] = useMemo(
-    () => [
+  // === Columns with permission-based actions
+  const columns: DataTableColumn<EmployeeRow>[] = useMemo(() => {
+    const baseCols: DataTableColumn<EmployeeRow>[] = [
       {
         key: "no",
         label: "No.",
@@ -186,33 +194,42 @@ export default function EmployeesPage() {
             <span className="text-xs text-muted-foreground">—</span>
           ),
       },
-      {
+    ];
+
+    // tampilkan kolom Aksi hanya jika user punya salah satu dari update/delete
+    if (canUpdate || canDelete) {
+      baseCols.push({
         key: "actions",
         label: "Aksi",
         className: "w-24 text-right",
         render: (r) => {
-          const items = [
-            { key: "edit", label: "Edit" },
-            ...(r.username
-              ? [
-                  { key: "change-password", label: "Ubah Password" },
-                  {
-                    key: "toggle-status",
-                    label: r.isActive ? "Nonaktifkan Akun" : "Aktifkan Akun",
-                  },
-                ]
-              : []),
-            { key: "delete", label: "Hapus", destructive: true },
-          ] as const;
+          const items: { key: string; label: string; destructive?: boolean }[] = [];
+
+          if (canUpdate) {
+            items.push({ key: "edit", label: "Edit" });
+            if (r.username) {
+              items.push({ key: "change-password", label: "Ubah Password" });
+              items.push({
+                key: "toggle-status",
+                label: r.isActive ? "Nonaktifkan Akun" : "Aktifkan Akun",
+              });
+            }
+          }
+
+          if (canDelete) {
+            items.push({ key: "delete", label: "Hapus", destructive: true });
+          }
+
+          if (items.length === 0) return null;
 
           return (
             <ActionDropdown
-              items={items as any}
+              items={items}
               onClickItem={(key) => {
-                if (key === "edit") setEditRow(r);
-                else if (key === "delete") setDeleting(r);
-                else if (key === "change-password") setPwdRow(r);
-                else if (key === "toggle-status") {
+                if (key === "edit" && canUpdate) setEditRow(r);
+                else if (key === "delete" && canDelete) setDeleting(r);
+                else if (key === "change-password" && canUpdate) setPwdRow(r);
+                else if (key === "toggle-status" && canUpdate) {
                   startTransition(async () => {
                     const res = await toggleEmployeeAccountStatus(r.id);
                     if (res.ok) {
@@ -226,11 +243,11 @@ export default function EmployeesPage() {
             />
           );
         },
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, perPage]
-  );
+      });
+    }
+
+    return baseCols;
+  }, [page, perPage, canUpdate, canDelete]);
 
   const sortKey =
     sort.startsWith("name") ? "fullName" : sort.startsWith("position") ? "position" : undefined;
@@ -278,7 +295,8 @@ export default function EmployeesPage() {
         </div>
 
         <div className="flex items-center sm:justify-end">
-          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
+          {/* tombol tambah hanya tampil kalau punya izin create */}
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>}
         </div>
       </div>
 

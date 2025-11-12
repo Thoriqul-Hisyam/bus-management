@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useMemo } from "react";
 import { listPositions, deletePosition } from "@/actions/position";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
@@ -10,11 +10,17 @@ import { Button } from "@/components/ui/button";
 import { DeleteConfirm } from "@/components/shared/delete-confirm";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useHasPerm } from "@/components/SessionProvider";
 
 type SortKey = "name_asc" | "name_desc" | "id_asc" | "id_desc";
 type PositionRow = { id: number; name: string };
 
 export default function PositionPage() {
+  // === Permission checks (UI)
+  const canCreate = useHasPerm("master.position.create");
+  const canUpdate = useHasPerm("master.position.update");
+  const canDelete = useHasPerm("master.position.delete");
+
   const [q, setQ] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("name_asc");
   const [page, setPage] = useState<number>(1);
@@ -74,37 +80,50 @@ export default function PositionPage() {
   }, [q]);
 
   const startIndex = (page - 1) * perPage;
-  const columns: DataTableColumn<PositionRow>[] = [
-    {
-      key: "no",
-      label: "No.",
-      className: "w-20 text-center",
-      render: (_row, rowIndex) => rowIndex + 1,
-    },
-    {
-      key: "name",
-      label: "Nama Jabatan",
-      sortable: true,
-      render: (row) => <span className="font-medium">{row.name}</span>,
-    },
-    {
-      key: "actions",
-      label: "Aksi",
-      className: "w-24 text-right",
-      render: (row) => (
-        <ActionDropdown
-          items={[
-            { key: "edit", label: "Edit" },
-            { key: "delete", label: "Hapus", destructive: true },
-          ]}
-          onClickItem={(key) => {
-            if (key === "edit") router.push(`/master/position/${row.id}/edit`);
-            else if (key === "delete") setDeleting(row);
-          }}
-        />
-      ),
-    },
-  ];
+
+  // === Columns (aksi kondisional sesuai permission)
+  const columns: DataTableColumn<PositionRow>[] = useMemo(() => {
+    const base: DataTableColumn<PositionRow>[] = [
+      {
+        key: "no",
+        label: "No.",
+        className: "w-20 text-center",
+        render: (_row, rowIndex) => rowIndex + 1,
+      },
+      {
+        key: "name",
+        label: "Nama Jabatan",
+        sortable: true,
+        render: (row) => <span className="font-medium">{row.name}</span>,
+      },
+    ];
+
+    if (canUpdate || canDelete) {
+      base.push({
+        key: "actions",
+        label: "Aksi",
+        className: "w-24 text-right",
+        render: (row) => {
+          const items: { key: string; label: string; destructive?: boolean }[] = [];
+          if (canUpdate) items.push({ key: "edit", label: "Edit" });
+          if (canDelete) items.push({ key: "delete", label: "Hapus", destructive: true });
+          if (items.length === 0) return null;
+
+          return (
+            <ActionDropdown
+              items={items}
+              onClickItem={(key) => {
+                if (key === "edit" && canUpdate) router.push(`/master/position/${row.id}/edit`);
+                else if (key === "delete" && canDelete) setDeleting(row);
+              }}
+            />
+          );
+        },
+      });
+    }
+
+    return base;
+  }, [canUpdate, canDelete, router]);
 
   const sortKey = sort.startsWith("name") ? "name" : undefined;
   const sortDir =
@@ -130,9 +149,12 @@ export default function PositionPage() {
         </div>
 
         <div className="sm:ml-auto flex items-center gap-2">
-          <Button asChild>
-            <Link href="/master/position/new">+ Tambah</Link>
-          </Button>
+          {/* Tambah hanya jika punya izin create */}
+          {canCreate && (
+            <Button asChild>
+              <Link href="/master/position/new">+ Tambah</Link>
+            </Button>
+          )}
         </div>
       </div>
 

@@ -6,12 +6,12 @@ import Swal from "sweetalert2";
 
 import { listTripSheets, listBusOptions, type TripSheetSort } from "@/actions/schedule";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import RSelect, { type Option as ROption } from "@/components/shared/rselect";
+import { useHasPerm } from "@/components/SessionProvider";
 
 type Row = {
   id: number;
@@ -56,7 +56,24 @@ type SortKey =
 export default function TripSheetPage() {
   const router = useRouter();
 
-  // === UI State (mirip /master/bus) ===
+  // === Permission checks
+  const canRead = useHasPerm("trip_sheet.read");
+  const canPrint = useHasPerm("trip_sheet.print");
+  const canWrite = useHasPerm("trip_sheet.write");
+
+  // Jika tidak punya akses lihat, tampilkan pesan sederhana
+  if (!canRead) {
+    return (
+      <main className="p-6">
+        <h1 className="text-2xl font-semibold mb-4">List Surat Jalan</h1>
+        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+          Anda tidak memiliki izin untuk melihat Surat Jalan.
+        </div>
+      </main>
+    );
+  }
+
+  // === UI State
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<TripSheetSort>("start_desc");
   const [page, setPage] = useState(1);
@@ -227,20 +244,26 @@ export default function TripSheetPage() {
         className: "w-40 text-right",
         render: (r) => (
           <div className="flex justify-end gap-2">
-            {r.tripId ? (
+            {canPrint && r.tripId ? (
               <Button variant="outline" size="sm" onClick={() => handlePrint(r)}>
                 Cetak
               </Button>
             ) : null}
-            <Button variant="default" size="sm" onClick={() => router.push(`/trip_sheet/create/${r.id}`)}>
-              Create / Edit
-            </Button>
+            {canWrite ? (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => router.push(`/trip_sheet/create/${r.id}`)}
+              >
+                Create / Edit
+              </Button>
+            ) : null}
           </div>
         ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, perPage]
+    [page, perPage, canPrint, canWrite]
   );
 
   // === Mapping sort untuk DataTable header indicator ===
@@ -279,6 +302,7 @@ export default function TripSheetPage() {
 
   // === Print handler ===
   function handlePrint(s: Row) {
+    if (!canPrint) return; // hard guard (sekadar berjaga)
     const w = window.open("", "_blank");
     if (!w) return;
     const rupiah = (n: number | null | undefined) => `Rp ${(Number(n ?? 0)).toLocaleString("id-ID")}`;

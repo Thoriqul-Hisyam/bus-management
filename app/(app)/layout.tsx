@@ -9,7 +9,9 @@ export const metadata = { title: "Navara Dashboard" };
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const s = await readSession(); // server
-  const sessionForClient = s ? { name: s.name, role: s.role } : null;
+  const sessionForClient = s
+    ? { name: s.name, positionName: s.positionName, perms: s.perms }
+    : null;
 
   return (
     <html suppressHydrationWarning>

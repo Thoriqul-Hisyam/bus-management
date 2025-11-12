@@ -2,13 +2,23 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { listSchedules, deleteSchedule, listBusOptions } from "@/actions/schedule";
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import { useRouter } from "next/navigation";
+import {
+  listSchedules,
+  deleteSchedule,
+  listBusOptions,
+} from "@/actions/schedule";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import Pagination from "@/components/shared/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import RSelect, { type Option } from "@/components/shared/rselect";
 import Swal from "sweetalert2";
+import { ActionDropdown } from "@/components/shared/action-dropdown";
+import { useHasPerm } from "@/components/SessionProvider";
 
 type SortKey =
   | "start_asc"
@@ -42,13 +52,38 @@ function fmtDate(dt: string | null) {
   if (!dt) return "—";
   try {
     const d = new Date(dt);
-    return d.toLocaleString();
+    return d.toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return dt;
   }
 }
 
 export default function ScheduleInputPage() {
+  const router = useRouter();
+
+  // permission checks
+  const canRead = useHasPerm("schedule.input.read");
+  const canCreate = useHasPerm("schedule.input.create");
+  const canUpdate = useHasPerm("schedule.input.update");
+  const canDelete = useHasPerm("schedule.input.delete");
+
+  if (!canRead) {
+    return (
+      <main className="p-6">
+        <h1 className="text-2xl font-semibold mb-4">Input Jadwal Armada</h1>
+        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+          Anda tidak memiliki izin untuk melihat jadwal.
+        </div>
+      </main>
+    );
+  }
+
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
@@ -71,8 +106,8 @@ export default function ScheduleInputPage() {
       if (res.ok) {
         setBusOptions(
           res.data.map((b: any) => ({
-            value: b.id,
-            label: b.name ?? `Bus ${b.id}`,
+            value: b.value ?? b.id, // jaga-jaga dua format
+            label: b.label ?? b.name ?? `Bus ${b.id}`,
           }))
         );
       } else {
@@ -140,9 +175,15 @@ export default function ScheduleInputPage() {
   }, [q]);
 
   const startIndex = (page - 1) * perPage;
+
   const columns: DataTableColumn<Row>[] = useMemo(
     () => [
-      { key: "no", label: "No.", className: "w-14 text-center", render: (_r, i) => i + 1 },
+      {
+        key: "no",
+        label: "No.",
+        className: "w-14 text-center",
+        render: (_r, i) => i + 1,
+      },
       { key: "customer", label: "Customer", render: (r) => r.customer ?? "—" },
       {
         key: "bus",
@@ -150,25 +191,45 @@ export default function ScheduleInputPage() {
         render: (r) => (
           <div className="flex flex-col">
             <span className="font-medium">{r.bus ?? "—"}</span>
-            <span className="text-xs text-muted-foreground">{r.plateNo ?? ""}</span>
+            <span className="text-xs text-muted-foreground">
+              {r.plateNo ?? ""}
+            </span>
           </div>
         ),
       },
-      { key: "legrest", label: "Legrest", render: (r) => (r.legrest ? "Yes" : "No") },
-      { key: "pickupAddress", label: "Penjemputan", render: (r) => r.pickupAddress ?? "—" },
+      {
+        key: "legrest",
+        label: "Legrest",
+        render: (r) => (r.legrest ? "Yes" : "No"),
+      },
+      {
+        key: "pickupAddress",
+        label: "Penjemputan",
+        render: (r) => r.pickupAddress ?? "—",
+      },
       { key: "destination", label: "Tujuan", render: (r) => r.destination ?? "—" },
       {
         key: "amount",
         label: "DP / Total",
         render: (r) => (
           <div className="flex flex-col">
-            <span className="text-xs">DP: Rp {r.amount.toLocaleString()}</span>
-            <span className="font-medium">Rp {r.priceTotal.toLocaleString()}</span>
+            <span className="text-xs">DP: Rp {r.amount.toLocaleString("id-ID")}</span>
+            <span className="font-medium">Rp {r.priceTotal.toLocaleString("id-ID")}</span>
           </div>
         ),
       },
-      { key: "rentStartAt", label: "Mulai", sortable: true, render: (r) => fmtDate(r.rentStartAt) },
-      { key: "rentEndAt", label: "Selesai", sortable: true, render: (r) => fmtDate(r.rentEndAt) },
+      {
+        key: "rentStartAt",
+        label: "Mulai",
+        sortable: true,
+        render: (r) => fmtDate(r.rentStartAt),
+      },
+      {
+        key: "rentEndAt",
+        label: "Selesai",
+        sortable: true,
+        render: (r) => fmtDate(r.rentEndAt),
+      },
       {
         key: "crew",
         label: "Crew",
@@ -184,42 +245,48 @@ export default function ScheduleInputPage() {
         key: "actions",
         label: "Aksi",
         className: "w-28 text-right",
-        render: (r) => (
-          <div className="flex gap-2 justify-end">
-            <Link
-              href={`/schedule/input/${r.id}/edit`}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              Edit
-            </Link>
-            <button
-              onClick={async () => {
-                const conf = await Swal.fire({
-                  title: "Hapus jadwal ini?",
-                  icon: "warning",
-                  showCancelButton: true,
-                  confirmButtonText: "Hapus",
-                  cancelButtonText: "Batal",
-                  confirmButtonColor: "#dc2626",
-                });
-                if (!conf.isConfirmed) return;
-                const res = await deleteSchedule(r.id);
-                if (res.ok) {
-                  await fetchData();
-                } else {
-                  Swal.fire("Gagal", res.error, "error");
+        render: (r) => {
+          // siapkan item sesuai permission
+          const items: { key: "edit" | "delete"; label: string; destructive?: boolean }[] = [];
+          if (canUpdate) items.push({ key: "edit", label: "Edit" });
+          if (canDelete) items.push({ key: "delete", label: "Hapus", destructive: true });
+
+          if (items.length === 0) return <span className="text-muted-foreground">—</span>;
+
+          return (
+            <ActionDropdown
+              items={items as any}
+              onClickItem={async (key) => {
+                if (key === "edit") {
+                  router.push(`/schedule/input/${r.id}/edit`);
+                  return;
+                }
+                if (key === "delete") {
+                  const conf = await Swal.fire({
+                    title: "Hapus jadwal ini?",
+                    text: `Booking #${r.id} akan dihapus permanen.`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Hapus",
+                    cancelButtonText: "Batal",
+                    confirmButtonColor: "#dc2626",
+                  });
+                  if (!conf.isConfirmed) return;
+                  const res = await deleteSchedule(r.id);
+                  if (res.ok) {
+                    await fetchData();
+                  } else {
+                    Swal.fire("Gagal", res.error, "error");
+                  }
                 }
               }}
-              className="text-red-600 hover:text-red-700"
-            >
-              Hapus
-            </button>
-          </div>
-        ),
+            />
+          );
+        },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, perPage]
+    [page, perPage, canUpdate, canDelete]
   );
 
   const sortKey =
@@ -231,9 +298,11 @@ export default function ScheduleInputPage() {
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">Input Jadwal Armada</h1>
         <div>
-          <Link href="/schedule/input/new">
-            <Button>+ Tambah Jadwal</Button>
-          </Link>
+          {canCreate ? (
+            <Link href="/schedule/input/new">
+              <Button>+ Tambah Jadwal</Button>
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -253,7 +322,9 @@ export default function ScheduleInputPage() {
         </div>
 
         <div className="min-w-48 w-full">
-          <label className="block text-xs text-muted-foreground mb-1">Filter Armada</label>
+          <label className="block text-xs text-muted-foreground mb-1">
+            Filter Armada
+          </label>
           <RSelect
             instanceId="bus-filter"
             options={[{ value: "all", label: "Semua Armada" }, ...busOptions]}
@@ -269,7 +340,9 @@ export default function ScheduleInputPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Mulai Dari</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Mulai Dari
+            </label>
             <Input
               type="datetime-local"
               value={startFrom}
@@ -280,7 +353,9 @@ export default function ScheduleInputPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Selesai Hingga</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Selesai Hingga
+            </label>
             <Input
               type="datetime-local"
               value={endTo}
@@ -294,7 +369,9 @@ export default function ScheduleInputPage() {
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Urutkan</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Urutkan
+            </label>
             <RSelect
               instanceId="sort-schedule"
               options={[
@@ -314,10 +391,15 @@ export default function ScheduleInputPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Per Halaman</label>
+            <label className="block text-xs text-muted-foreground mb-1">
+              Per Halaman
+            </label>
             <RSelect
               instanceId="perpage-schedule"
-              options={[10, 20, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+              options={[10, 20, 50, 100].map((n) => ({
+                value: String(n),
+                label: String(n),
+              }))}
               value={String(perPage)}
               onChange={(v) => {
                 const pp = Number(v ?? "10");
@@ -341,11 +423,15 @@ export default function ScheduleInputPage() {
         onHeaderClick={(col) => {
           if (col.key === "rentStartAt") {
             setPage(1);
-            setSort((prev) => (prev === "start_asc" ? "start_desc" : "start_asc"));
+            setSort((prev) =>
+              prev === "start_asc" ? "start_desc" : "start_asc"
+            );
           }
           if (col.key === "rentEndAt") {
             setPage(1);
-            setSort((prev) => (prev === "end_asc" ? "end_desc" : "end_asc"));
+            setSort((prev) =>
+              prev === "end_asc" ? "end_desc" : "end_asc"
+            );
           }
         }}
       />

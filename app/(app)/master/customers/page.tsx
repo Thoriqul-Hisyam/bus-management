@@ -20,6 +20,7 @@ import { ActionDropdown } from "@/components/shared/action-dropdown";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useHasPerm } from "@/components/SessionProvider";
 
 type SortKey = "name_asc" | "name_desc" | "travel_asc" | "travel_desc";
 
@@ -30,15 +31,23 @@ type Row = {
   phone?: string | null;
 };
 
+const PERM_CREATE = "master.customers.create";
+const PERM_UPDATE = "master.customers.update";
+const PERM_DELETE = "master.customers.delete";
+
 const FormSchema = z.object({
   name: z.string().min(1, "Nama wajib diisi"),
   travel: z.string().optional(),
   phone: z.string().optional(),
 });
-
 type FormValues = z.infer<typeof FormSchema>;
 
 export default function CustomerPage() {
+  // === Permission checks (UI)
+  const canCreate = useHasPerm(PERM_CREATE);
+  const canUpdate = useHasPerm(PERM_UPDATE);
+  const canDelete = useHasPerm(PERM_DELETE);
+
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<SortKey>("name_asc");
   const [page, setPage] = useState(1);
@@ -100,8 +109,8 @@ export default function CustomerPage() {
 
   const startIndex = (page - 1) * perPage;
 
-  const columns: DataTableColumn<Row>[] = useMemo(
-    () => [
+  const columns: DataTableColumn<Row>[] = useMemo(() => {
+    const base: DataTableColumn<Row>[] = [
       {
         key: "no",
         label: "No.",
@@ -125,35 +134,42 @@ export default function CustomerPage() {
         label: "Telepon",
         render: (r) => r.phone ?? "—",
       },
-      {
+    ];
+
+    // tampilkan kolom Aksi hanya jika punya salah satu izin update/delete
+    if (canUpdate || canDelete) {
+      base.push({
         key: "actions",
         label: "Aksi",
         className: "w-24 text-right",
         render: (r) => {
-          const items = [
-            { key: "edit", label: "Edit" },
-            { key: "delete", label: "Hapus", destructive: true },
-          ] as const;
+          const items: { key: string; label: string; destructive?: boolean }[] = [];
+          if (canUpdate) items.push({ key: "edit", label: "Edit" });
+          if (canDelete) items.push({ key: "delete", label: "Hapus", destructive: true });
+          if (items.length === 0) return null;
+
           return (
             <ActionDropdown
-              items={items as any}
+              items={items}
               onClickItem={(key) => {
-                if (key === "edit") setEditRow(r);
-                else if (key === "delete") setDeleting(r);
+                if (key === "edit" && canUpdate) setEditRow(r);
+                else if (key === "delete" && canDelete) setDeleting(r);
               }}
             />
           );
         },
-      },
-    ],
-    [page, perPage]
-  );
+      });
+    }
 
-  const sortKey = sort.startsWith("name")
-    ? "name"
-    : sort.startsWith("travel")
-    ? "travel"
-    : undefined;
+    return base;
+  }, [canUpdate, canDelete, page, perPage]);
+
+  const sortKey =
+    sort.startsWith("name")
+      ? "name"
+      : sort.startsWith("travel")
+      ? "travel"
+      : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
 
   return (
@@ -176,7 +192,8 @@ export default function CustomerPage() {
         </div>
 
         <div className="flex items-center sm:justify-end">
-          <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>
+          {/* tombol tambah hanya bila punya izin create */}
+          {canCreate && <Button onClick={() => setCreateOpen(true)}>+ Tambah</Button>}
         </div>
       </div>
 
