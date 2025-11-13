@@ -21,18 +21,29 @@ import {
 } from "@/actions/schedule";
 
 const FormSchema = z.object({
-  customerId: z.coerce.number().int().positive(),
-  busId: z.coerce.number().int().positive(),
+  customerId: z.coerce
+    .number()
+    .int()
+    .positive({ message: "Customer wajib dipilih" }),
+  busId: z.coerce.number().int().positive({ message: "Armada wajib dipilih" }),
   pickupAddress: z.string().min(1, "Alamat penjemputan wajib diisi"),
   destination: z.string().min(1, "Tujuan wajib diisi"),
-  seatsBooked: z.coerce.number().int().positive(),
-  priceTotal: z.coerce.number().positive(),
+  seatsBooked: z.coerce
+    .number()
+    .int()
+    .positive({ message: "Jumlah kursi wajib diisi" }),
+  priceTotal: z.coerce
+    .number()
+    .positive({ message: "Harga total wajib diisi" }),
   legrest: z.boolean().optional().default(false),
-  driverId: z.coerce.number().int().positive(),
-  coDriverId: z.coerce.number().int().positive(),
-  salesId: z.coerce.number().int().positive(),
-  rentStartAt: z.string().min(1),
-  rentEndAt: z.string().min(1),
+  driverId: z.coerce
+    .number()
+    .int()
+    .positive({ message: "Driver wajib dipilih" }),
+  coDriverId: z.coerce.number().optional(),
+  salesId: z.coerce.number().int().positive({ message: "Sales wajib dipilih" }),
+  rentStartAt: z.string().min(1, "Tanggal mulai wajib diisi"),
+  rentEndAt: z.string().min(1, "Tanggal selesai wajib diisi"),
   pickupAt: z.string().optional(),
   status: z.string().min(1),
   notes: z.string().optional(),
@@ -45,6 +56,7 @@ export default function NewSchedulePage() {
   useEffect(() => setMounted(true), []);
 
   const [isPending, startTransition] = useTransition();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [customerOpts, setCustomerOpts] = useState<ROption[]>([]);
   const [busOpts, setBusOpts] = useState<ROption[]>([]);
@@ -108,6 +120,7 @@ export default function NewSchedulePage() {
   }, []);
 
   const submit = async () => {
+    setErrors({});
     const parsed = FormSchema.safeParse({
       ...form,
       customerId: form.customerId,
@@ -126,6 +139,12 @@ export default function NewSchedulePage() {
     });
 
     if (!parsed.success) {
+      const newErrors: Record<string, string> = {};
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0] as string;
+        newErrors[field] = issue.message;
+      });
+      setErrors(newErrors);
       Swal.fire(
         "Gagal",
         parsed.error.issues[0]?.message ?? "Input tidak valid",
@@ -184,7 +203,9 @@ export default function NewSchedulePage() {
               value={form.busId}
               onChange={(v) =>
                 setForm((s) => {
-                  const selected = (busOpts as any[]).find((b) => b.value === v);
+                  const selected = (busOpts as any[]).find(
+                    (b) => b.value === v
+                  );
                   return {
                     ...s,
                     busId: v,
@@ -195,7 +216,6 @@ export default function NewSchedulePage() {
               }
               placeholder="Pilih armada"
             />
-
           </div>
 
           <div className="grid grid-cols-2 gap-3">
