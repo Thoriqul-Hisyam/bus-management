@@ -30,11 +30,28 @@ export async function listCustomerOptions(): Promise<Result<Option[]>> {
 export async function listBusOptions(): Promise<Result<Option[]>> {
   try {
     const rows = await prisma.bus.findMany({
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        driverId: true,
+        coDriverId: true,
+        driver: { select: { fullName: true } },
+        coDriver: { select: { fullName: true } },
+      },
       orderBy: { name: "asc" },
       take: 1000,
     });
-    return ok(rows.map((b) => ({ value: b.id, label: b.name })));
+
+    return ok(
+      rows.map((b) => ({
+        value: b.id,
+        label: b.name,
+        driverId: b.driverId,
+        coDriverId: b.coDriverId,
+        driverName: b.driver?.fullName ?? null,
+        coDriverName: b.coDriver?.fullName ?? null,
+      })) as any
+    );
   } catch (e: any) {
     return err(e.message ?? "Gagal mengambil opsi armada");
   }

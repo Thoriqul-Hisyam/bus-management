@@ -9,6 +9,11 @@ import {
   listBusTypes,
 } from "@/actions/bus";
 
+import {
+  listDriverOptions,
+  listCoDriverOptions,
+} from "@/actions/schedule";
+
 import { z } from "zod";
 import {
   DataTable,
@@ -45,6 +50,10 @@ type Row = {
   capacity: number;
   busTypeId: number;
   busType: { id: number; name: string } | null;
+  driverId?: number | null;
+  coDriverId?: number | null;
+  driverName?: string | null;
+  coDriverName?: string | null;
 };
 
 const FormSchema = z.object({
@@ -52,6 +61,19 @@ const FormSchema = z.object({
   plateNo: z.string().min(1, "Nomor polisi wajib diisi"),
   busTypeId: z.coerce.number().int().positive("Tipe armada wajib dipilih"),
   capacity: z.coerce.number().int().min(0, "Minimal 0"),
+
+  driverId: z
+    .preprocess(
+      (v) => (v === null || v === "" ? undefined : v),
+      z.coerce.number().int().positive()
+    )
+    .optional(),
+  coDriverId: z
+    .preprocess(
+      (v) => (v === null || v === "" ? undefined : v),
+      z.coerce.number().int().positive()
+    )
+    .optional(),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
@@ -70,6 +92,9 @@ export default function BusPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [types, setTypes] = useState<BusTypeOpt[]>([]);
+
+  const [driverOpts, setDriverOpts] = useState<ROption[]>([]);
+  const [coDriverOpts, setCoDriverOpts] = useState<ROption[]>([]);
 
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
@@ -120,8 +145,16 @@ export default function BusPage() {
 
   useEffect(() => {
     startTransition(async () => {
-      const t = await listBusTypes();
+      const [t, d, cd] = await Promise.all([
+        listBusTypes(),
+        listDriverOptions(),
+        listCoDriverOptions(),
+      ]);
+
       if (t.ok) setTypes(t.data);
+      if (d.ok) setDriverOpts(d.data as any);
+      if (cd.ok) setCoDriverOpts(cd.data as any);
+
       await fetchData({ page: 1 });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -182,6 +215,16 @@ export default function BusPage() {
         className: "w-24 text-right",
         render: (r) => r.capacity,
       },
+      {
+        key: "driver",
+        label: "Driver",
+        render: (r) => r.driverName ?? "—",
+      },
+      {
+        key: "coDriver",
+        label: "Co-Driver",
+        render: (r) => r.coDriverName ?? "—",
+      },  
     ];
 
     // tampilkan kolom aksi hanya jika punya salah satu izin update/delete
@@ -318,6 +361,8 @@ export default function BusPage() {
           plateNo: "",
           busTypeId: (typeOptions[0]?.value as number | undefined) ?? undefined,
           capacity: 0,
+          driverId: undefined,
+          coDriverId: undefined,
         }}
         onSubmit={async (values) => {
           const res = await createBus(values);
@@ -393,6 +438,44 @@ export default function BusPage() {
                 </p>
               )}
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Driver Default (opsional)</label>
+              <Controller
+                name="driverId"
+                control={f.control}
+                render={({ field }) => (
+                  <RSelect
+                    options={driverOpts}
+                    value={field.value as number | undefined}
+                    onChange={(v) =>
+                      field.onChange(v == null ? undefined : Number(v))
+                    }
+                    placeholder="Pilih driver (opsional)"
+                    isClearable
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Co-Driver Default (opsional)</label>
+              <Controller
+                name="coDriverId"
+                control={f.control}
+                render={({ field }) => (
+                  <RSelect
+                    options={coDriverOpts}
+                    value={field.value as number | undefined}
+                    onChange={(v) =>
+                      field.onChange(v == null ? undefined : Number(v))
+                    }
+                    placeholder="Pilih co-driver (opsional)"
+                    isClearable
+                  />
+                )}
+              />
+            </div>
           </>
         )}
       />
@@ -410,6 +493,8 @@ export default function BusPage() {
                 plateNo: editRow.plateNo,
                 busTypeId: editRow.busTypeId,
                 capacity: editRow.capacity,
+                driverId: editRow.driverId ?? undefined,
+                coDriverId: editRow.coDriverId ?? undefined,
               }
             : undefined
         }
@@ -487,6 +572,43 @@ export default function BusPage() {
                   {String(f.formState.errors.capacity.message)}
                 </p>
               )}
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Driver Default (opsional)</label>
+              <Controller
+                name="driverId"
+                control={f.control}
+                render={({ field }) => (
+                  <RSelect
+                    options={driverOpts}
+                    value={field.value as number | undefined}
+                    onChange={(v) =>
+                      field.onChange(v == null ? undefined : Number(v))
+                    }
+                    placeholder="Pilih driver (opsional)"
+                    isClearable
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Co-Driver Default (opsional)</label>
+              <Controller
+                name="coDriverId"
+                control={f.control}
+                render={({ field }) => (
+                  <RSelect
+                    options={coDriverOpts}
+                    value={field.value as number | undefined}
+                    onChange={(v) =>
+                      field.onChange(v == null ? undefined : Number(v))
+                    }
+                    placeholder="Pilih co-driver (opsional)"
+                    isClearable
+                  />
+                )}
+              />
             </div>
           </>
         )}

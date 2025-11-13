@@ -86,7 +86,11 @@ export async function listBus(input?: {
         orderBy,
         skip: (page - 1) * perPage,
         take: perPage,
-        include: { busType: { select: { id: true, name: true } } },
+        include: { 
+          busType: { select: { id: true, name: true } },
+          driver: { select: { id: true, fullName: true } },
+          coDriver: { select: { id: true, fullName: true } }, 
+        },
       }),
       prisma.bus.count({ where }),
     ]);
@@ -98,6 +102,10 @@ export async function listBus(input?: {
       capacity: r.capacity,
       busTypeId: r.busTypeId,
       busType: r.busType,
+      driverId: r.driverId,
+      coDriverId: r.coDriverId,
+      driverName: r.driver?.fullName ?? null,
+      coDriverName: r.coDriver?.fullName ?? null,
     }));
 
     return ok({ rows: shaped, total });
@@ -114,11 +122,12 @@ export async function createBus(input: unknown): Promise<Result<any>> {
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
-    const { name, plateNo, capacity, busTypeId } = parsed.data;
+    const { name, plateNo, capacity, busTypeId, driverId, coDriverId } =
+      parsed.data;
 
     const created = await prisma.bus.create({
-      data: { name, plateNo, capacity, busTypeId },
-      include: { busType: true },
+      data: { name, plateNo, capacity, busTypeId, driverId, coDriverId },
+      include: { busType: true, driver: true, coDriver: true },
     });
 
     revalidateMasterBus();
@@ -141,12 +150,13 @@ export async function updateBus(input: unknown): Promise<Result<any>> {
     if (!parsed.success)
       return err(parsed.error.issues[0]?.message ?? "Input tidak valid");
 
-    const { id, name, plateNo, capacity, busTypeId } = parsed.data;
+    const { id, name, plateNo, capacity, busTypeId, driverId, coDriverId } =
+      parsed.data;
 
     const updated = await prisma.bus.update({
       where: { id },
-      data: { name, plateNo, capacity, busTypeId },
-      include: { busType: true },
+      data: { name, plateNo, capacity, busTypeId, driverId, coDriverId },
+      include: { busType: true, driver: true, coDriver: true },
     });
 
     revalidateMasterBus();

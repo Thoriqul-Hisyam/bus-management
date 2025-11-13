@@ -182,9 +182,20 @@ export default function NewSchedulePage() {
               instanceId="new-bus"
               options={busOpts}
               value={form.busId}
-              onChange={(v) => setForm((s) => ({ ...s, busId: v }))}
+              onChange={(v) =>
+                setForm((s) => {
+                  const selected = (busOpts as any[]).find((b) => b.value === v);
+                  return {
+                    ...s,
+                    busId: v,
+                    driverId: selected?.driverId ?? null,
+                    coDriverId: selected?.coDriverId ?? null,
+                  };
+                })
+              }
               placeholder="Pilih armada"
             />
+
           </div>
 
           <div className="grid grid-cols-2 gap-3">

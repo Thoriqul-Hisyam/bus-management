@@ -32,6 +32,12 @@ model Bus {
   busTypeId Int
   busType   BusType   @relation(fields: [busTypeId], references: [id])
 
+  driverId    Int?
+  driver      Employee? @relation("BusDriver", fields: [driverId], references: [id])
+
+  coDriverId  Int?
+  coDriver    Employee? @relation("BusCoDriver", fields: [coDriverId], references: [id])
+
   bookings  Booking[]
   @@map("Bus")
 }
@@ -107,6 +113,9 @@ model Employee {
   bookingsAsDriver   Booking[] @relation("DriverBookings")
   bookingsAsCoDriver Booking[] @relation("CoDriverBookings")
   bookingsAsSales    Booking[] @relation("SalesBookings")
+
+  busesAsDriver   Bus[] @relation("BusDriver")
+  busesAsCoDriver Bus[] @relation("BusCoDriver")
 
   @@map("employee")
 }
