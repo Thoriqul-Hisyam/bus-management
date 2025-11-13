@@ -33,7 +33,7 @@ model Bus {
   busType   BusType   @relation(fields: [busTypeId], references: [id])
 
   bookings  Booking[]
-  @@map("bus")
+  @@map("Bus")
 }
 
 model PermissionMenu {
