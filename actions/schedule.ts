@@ -570,7 +570,17 @@ export async function createSchedule(input: unknown): Promise<Result<any>> {
       await revalidateMasterSchedules();
     }
 
-    return ok(created);
+    return ok({
+      ...created,
+      priceTotal: created.priceTotal ? Number(created.priceTotal) : 0,
+      rentStartAt: created.rentStartAt?.toISOString() ?? null,
+      rentEndAt: created.rentEndAt?.toISOString() ?? null,
+      pickupAt: created.pickupAt?.toISOString() ?? null,
+      createdAt: created.createdAt?.toISOString() ?? null,
+      updatedAt: created.updatedAt?.toISOString() ?? null,
+      customer: created.customer?.name ?? null,
+      bus: created.bus?.name ?? null,
+    });
   } catch (e: any) {
     return err(e.message ?? "Gagal menambahkan schedule");
   }
