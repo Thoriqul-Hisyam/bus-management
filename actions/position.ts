@@ -6,7 +6,7 @@ import { ok, err, type Result } from "@/lib/result";
 import { PositionCreateSchema, PositionUpdateSchema } from "@/validators/position";
 import { requirePermission } from "@/lib/guard";
 
-const LOCKED_NAMES = new Set(["superadmin", "co-driver", "driver", "sales"]);
+const LOCKED_NAMES = new Set(["superadmin", "co-driver", "driver"]);
 
 function toKeyName(s: string) {
   return s.trim().toLowerCase();
