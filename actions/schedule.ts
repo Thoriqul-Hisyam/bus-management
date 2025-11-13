@@ -548,7 +548,7 @@ export async function createSchedule(input: unknown): Promise<Result<any>> {
         rentStartAt: data.rentStartAt,
         rentEndAt: data.rentEndAt,
         pickupAt: data.pickupAt,
-        status: data.status,
+        status: "CONFIRMED",
         notes: data.notes,
       },
       include: { customer: true, bus: true },

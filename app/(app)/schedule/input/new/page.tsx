@@ -95,8 +95,8 @@ export default function NewSchedulePage() {
       if (cRes.ok) {
         console.log(cRes);
         const options = cRes.data.map((c: any) => ({
-          value: c.id,
-          label: `${c.label} - ${c.travel}`, // sesuaikan property dari API-mu
+          value: c.value,
+          label: `${c.label ?? "-"} - ${c.travel ?? "-"}`,
         }));
         setCustomerOpts(options);
       }
@@ -344,14 +344,14 @@ export default function NewSchedulePage() {
 
           <div>
             <label className="text-sm text-muted-foreground">Status</label>
-            <RSelect
+            {/* <RSelect
               instanceId="new-status"
               options={statusOpts}
               value={form.status}
               onChange={(v) =>
                 setForm((s) => ({ ...s, status: (v as string) || "CONFIRMED" }))
               }
-            />
+            /> */}
           </div>
 
           <div className="flex items-center gap-2">
