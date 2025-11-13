@@ -56,6 +56,11 @@ type Row = {
   legrest: boolean;
 };
 
+type BusOption = Option & {
+  driverId?: number | null;
+  coDriverId?: number | null;
+};
+
 function fmtDate(dt: string | null) {
   if (!dt) return "—";
   try {
@@ -91,6 +96,7 @@ export default function ScheduleInputPage() {
       </main>
     );
   }
+
   const [driverOpts, setDriverOpts] = useState<Option[]>([]);
   const [coDriverOpts, setCoDriverOpts] = useState<Option[]>([]);
 
@@ -99,7 +105,7 @@ export default function ScheduleInputPage() {
   const [perPage, setPerPage] = useState(10);
   const [sort, setSort] = useState<SortKey>("created_desc");
 
-  const [busOptions, setBusOptions] = useState<Option[]>([]);
+  const [busOptions, setBusOptions] = useState<BusOption[]>([]);
   const [busId, setBusId] = useState<number | null>(null);
   const [startFrom, setStartFrom] = useState<string>(""); // YYYY-MM-DD or datetime-local
   const [endTo, setEndTo] = useState<string>("");
@@ -130,7 +136,8 @@ export default function ScheduleInputPage() {
     (async () => {
       const res = await listBusOptions();
       if (res.ok) {
-        setBusOptions(res.data);
+        // pastikan listBusOptions mengembalikan { value, label, driverId, coDriverId }
+        setBusOptions(res.data as BusOption[]);
       } else {
         console.error(res.error);
       }
@@ -411,7 +418,9 @@ export default function ScheduleInputPage() {
     ? "rentEndAt"
     : undefined;
   const sortDir = sort.endsWith("_asc") ? "asc" : "desc";
+
   if (!isClient) return null;
+
   return (
     <main className="p-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -548,12 +557,14 @@ export default function ScheduleInputPage() {
           }
           if (col.key === "rentEndAt") {
             setPage(1);
-            setSort((prev) => (prev === "end_asc" ? "end_desc" : "end_asc"));
+            setSort((prev) =>
+              prev === "end_asc" ? "end_desc" : "end_asc"
+            );
           }
         }}
       />
 
-      {/* Pagination */}
+      {/* Pagination + Copy Modal */}
       <div className="mt-3">
         <Pagination
           page={page}
@@ -565,6 +576,7 @@ export default function ScheduleInputPage() {
             setPerPage(pp);
           }}
         />
+
         <CrudModal
           open={copyModalOpen}
           onOpenChange={setCopyModalOpen}
@@ -575,7 +587,7 @@ export default function ScheduleInputPage() {
             if (!copyTarget) return;
 
             const res = await createSchedule({
-              ...copyTarget, // ambil semua data lama
+              ...copyTarget, // ambil semua data lama (server-side schema akan mem-filter field yang dipakai)
               busId: values.busId,
               driverId: values.driverId,
               coDriverId: values.coDriverId,
@@ -595,7 +607,22 @@ export default function ScheduleInputPage() {
                   instanceId="copy-bus"
                   options={busOptions}
                   value={form.watch("busId") ?? ""}
-                  onChange={(v) => form.setValue("busId", Number(v))}
+                  onChange={(v) => {
+                    const busIdNum = Number(v);
+                    form.setValue("busId", busIdNum);
+
+                    // cari default driver & co-driver dari Bus yang dipilih
+                    const selected = busOptions.find(
+                      (b) => Number(b.value) === busIdNum
+                    );
+
+                    if (selected?.driverId) {
+                      form.setValue("driverId", selected.driverId);
+                    }
+                    if (selected?.coDriverId) {
+                      form.setValue("coDriverId", selected.coDriverId);
+                    }
+                  }}
                 />
                 {form.formState.errors.busId && (
                   <p className="text-sm text-destructive">
