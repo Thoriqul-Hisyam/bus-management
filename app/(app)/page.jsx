@@ -118,9 +118,11 @@ export default function ScheduleCheckPage() {
         `https://api-harilibur.vercel.app/api?year=${year}&month=${month}`
       );
       const data = await res.json();
-      const dates = data.map((item) => item.holiday_date);
+      const filtered = data.filter((item) => item.is_national_holiday === true);
+
+      const dates = filtered.map((item) => item.holiday_date);
       const mapLibur = {};
-      data.forEach((item) => {
+      filtered.forEach((item) => {
         mapLibur[item.holiday_date] = item.holiday_name;
       });
       setTanggalMerah(dates);
