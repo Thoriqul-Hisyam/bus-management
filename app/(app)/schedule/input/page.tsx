@@ -7,7 +7,11 @@ import {
   listSchedules,
   deleteSchedule,
   listBusOptions,
+  listDriverOptions,
+  listCoDriverOptions,
+  createSchedule,
 } from "@/actions/schedule";
+
 import {
   DataTable,
   type DataTableColumn,
@@ -19,6 +23,8 @@ import RSelect, { type Option } from "@/components/shared/rselect";
 import Swal from "sweetalert2";
 import { ActionDropdown } from "@/components/shared/action-dropdown";
 import { useHasPerm } from "@/components/SessionProvider";
+import { CrudModal } from "@/components/shared/crud-modal";
+import { CopyScheduleSchema } from "@/validators/schedule";
 
 type SortKey =
   | "start_asc"
@@ -85,6 +91,8 @@ export default function ScheduleInputPage() {
       </main>
     );
   }
+  const [driverOpts, setDriverOpts] = useState<Option[]>([]);
+  const [coDriverOpts, setCoDriverOpts] = useState<Option[]>([]);
 
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -99,10 +107,24 @@ export default function ScheduleInputPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
 
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copyTarget, setCopyTarget] = useState<Row | null>(null);
+
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
+
+  useEffect(() => {
+    (async () => {
+      const [dRes, cdRes] = await Promise.all([
+        listDriverOptions(),
+        listCoDriverOptions(),
+      ]);
+      if (dRes.ok) setDriverOpts(dRes.data);
+      if (cdRes.ok) setCoDriverOpts(cdRes.data);
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -328,11 +350,18 @@ export default function ScheduleInputPage() {
         className: "w-28 text-right",
         render: (r) => {
           // siapkan item sesuai permission
-          const items: { key: "edit" | "delete"; label: string; destructive?: boolean }[] = [];
+          const items: {
+            key: "edit" | "delete" | "copy";
+            label: string;
+            destructive?: boolean;
+          }[] = [];
           if (canUpdate) items.push({ key: "edit", label: "Edit" });
-          if (canDelete) items.push({ key: "delete", label: "Hapus", destructive: true });
+          if (canDelete)
+            items.push({ key: "delete", label: "Hapus", destructive: true });
+          if (canCreate) items.unshift({ key: "copy", label: "Copy Jadwal" });
 
-          if (items.length === 0) return <span className="text-muted-foreground">—</span>;
+          if (items.length === 0)
+            return <span className="text-muted-foreground">—</span>;
 
           return (
             <ActionDropdown
@@ -342,6 +371,12 @@ export default function ScheduleInputPage() {
                   router.push(`/schedule/input/${r.id}/edit`);
                   return;
                 }
+                if (key === "copy") {
+                  setCopyTarget(r); // simpan data yang akan di-copy
+                  setCopyModalOpen(true);
+                  return;
+                }
+
                 if (key === "delete") {
                   const conf = await Swal.fire({
                     title: "Hapus jadwal ini?",
@@ -513,9 +548,7 @@ export default function ScheduleInputPage() {
           }
           if (col.key === "rentEndAt") {
             setPage(1);
-            setSort((prev) =>
-              prev === "end_asc" ? "end_desc" : "end_asc"
-            );
+            setSort((prev) => (prev === "end_asc" ? "end_desc" : "end_asc"));
           }
         }}
       />
@@ -531,6 +564,77 @@ export default function ScheduleInputPage() {
             setPage(1);
             setPerPage(pp);
           }}
+        />
+        <CrudModal
+          open={copyModalOpen}
+          onOpenChange={setCopyModalOpen}
+          title="Copy Jadwal"
+          description="Pilih Armada, Driver, dan Co-Driver baru untuk membuat duplikat jadwal ini."
+          schema={CopyScheduleSchema}
+          onSubmit={async (values) => {
+            if (!copyTarget) return;
+
+            const res = await createSchedule({
+              ...copyTarget, // ambil semua data lama
+              busId: values.busId,
+              driverId: values.driverId,
+              coDriverId: values.coDriverId,
+            });
+
+            if (!res.ok) throw new Error(res.error || "Gagal copy jadwal");
+
+            setCopyModalOpen(false);
+            await fetchData();
+            Swal.fire("Berhasil", "Jadwal berhasil disalin.", "success");
+          }}
+          renderFields={(form) => (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Armada</label>
+                <RSelect
+                  instanceId="copy-bus"
+                  options={busOptions}
+                  value={form.watch("busId") ?? ""}
+                  onChange={(v) => form.setValue("busId", Number(v))}
+                />
+                {form.formState.errors.busId && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.busId.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Driver</label>
+                <RSelect
+                  instanceId="copy-driver"
+                  options={driverOpts}
+                  value={form.watch("driverId") ?? ""}
+                  onChange={(v) => form.setValue("driverId", Number(v))}
+                />
+                {form.formState.errors.driverId && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.driverId.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Co Driver</label>
+                <RSelect
+                  instanceId="copy-codriver"
+                  options={coDriverOpts}
+                  value={form.watch("coDriverId") ?? ""}
+                  onChange={(v) => form.setValue("coDriverId", Number(v))}
+                />
+                {form.formState.errors.coDriverId && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.coDriverId.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         />
       </div>
     </main>

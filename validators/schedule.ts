@@ -1,5 +1,11 @@
-import { z } from "zod";
+import { optional, z } from "zod";
 import { BookingStatus } from "@prisma/client";
+
+export const CopyScheduleSchema = z.object({
+  busId: z.coerce.number().int().positive(),
+  driverId: z.coerce.number().int().positive(),
+  coDriverId: z.number().optional(),
+});
 
 export const ScheduleCreateSchema = z.object({
   customerId: z.coerce.number().int().positive(),
@@ -10,7 +16,7 @@ export const ScheduleCreateSchema = z.object({
   priceTotal: z.coerce.number().positive(),
   legrest: z.boolean(),
   driverId: z.coerce.number().int().positive(),
-  coDriverId: z.coerce.number().int().positive(),
+  coDriverId: z.number().optional(),
   salesId: z.coerce.number().int().positive(),
   rentStartAt: z.coerce.date(),
   rentEndAt: z.coerce.date(),

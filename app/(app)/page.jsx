@@ -249,7 +249,7 @@ export default function ScheduleCheckPage() {
             .animate-marquee span {
               display: inline-block;
               padding-left: 100%;
-              animation: marquee 20s linear infinite;
+              animation: marquee 60s linear infinite;
             }
           `}</style>
 
@@ -299,12 +299,14 @@ export default function ScheduleCheckPage() {
           {/* kalender */}
           <div className="rounded-lg border bg-background overflow-hidden">
             <Calendar
+              key={`${view}-${format(currentDate, "yyyy-MM-dd")}`}
               localizer={localizer}
               events={events}
               startAccessor="start"
               endAccessor="end"
               style={{ height: 600, minWidth: "700px" }}
               view={view}
+              date={currentDate}        
               onView={setView}
               onNavigate={setCurrentDate}
               dayPropGetter={dayPropGetter}
@@ -321,6 +323,7 @@ export default function ScheduleCheckPage() {
                 agenda: "Agenda",
               }}
             />
+
           </div>
         </CardContent>
       </Card>
