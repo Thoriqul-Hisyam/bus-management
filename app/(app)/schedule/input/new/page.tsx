@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Swal from "sweetalert2";
 import { z } from "zod";
 import { format } from "date-fns";
+import { formatRupiah, parseRupiah } from "@/utils/helpers/formatRupiah";
 
 import RSelect, { type Option as ROption } from "@/components/shared/rselect";
 
@@ -304,11 +305,11 @@ export default function NewSchedulePage() {
                 Harga Total
               </label>
               <Input
-                type="number"
-                value={form.priceTotal}
-                onChange={(e) =>
-                  setForm((s) => ({ ...s, priceTotal: e.target.value }))
-                }
+                value={formatRupiah(Number(form.priceTotal) || 0)}
+                onChange={(e) => {
+                  const raw = parseRupiah(e.target.value);
+                  setForm((s) => ({ ...s, priceTotal: raw.toString() }));
+                }}
               />
             </div>
           </div>
@@ -366,9 +367,11 @@ export default function NewSchedulePage() {
                 Nominal DP (opsional)
               </label>
               <Input
-                type="number"
-                value={form.dp}
-                onChange={(e) => setForm((s) => ({ ...s, dp: e.target.value }))}
+                value={formatRupiah(Number(form.dp) || 0)}
+                onChange={(e) => {
+                  const raw = parseRupiah(e.target.value);
+                  setForm((s) => ({ ...s, dp: raw.toString() }));
+                }}
               />
             </div>
           </div>
