@@ -651,7 +651,20 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
       id: updated.id,
     });
 
-    return ok(updated);
+    const safeUpdated = {
+      ...updated,
+      priceTotal:
+        updated.priceTotal != null ? Number(updated.priceTotal) : 0,
+      rentStartAt: updated.rentStartAt?.toISOString() ?? null,
+      rentEndAt: updated.rentEndAt?.toISOString() ?? null,
+      pickupAt: updated.pickupAt?.toISOString() ?? null,
+      createdAt: updated.createdAt?.toISOString() ?? null,
+      updatedAt: updated.updatedAt?.toISOString() ?? null,
+      customer: updated.customer?.name ?? null,
+      bus: updated.bus?.name ?? null,
+    };
+
+    return ok(safeUpdated);
   } catch (e: any) {
     return err(e.message ?? "Gagal memperbarui schedule");
   }
