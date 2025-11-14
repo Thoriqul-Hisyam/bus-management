@@ -653,8 +653,7 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
 
     const safeUpdated = {
       ...updated,
-      priceTotal:
-        updated.priceTotal != null ? Number(updated.priceTotal) : 0,
+      priceTotal: updated.priceTotal != null ? Number(updated.priceTotal) : 0,
       rentStartAt: updated.rentStartAt?.toISOString() ?? null,
       rentEndAt: updated.rentEndAt?.toISOString() ?? null,
       pickupAt: updated.pickupAt?.toISOString() ?? null,
@@ -701,13 +700,14 @@ export async function updateStatusSchedule(
   try {
     await requirePermission("schedule.input.update");
 
-    if (!id) return err("ID booking tidak valid");
+    if (!id || isNaN(Number(id))) return err("ID booking tidak valid");
     if (!status) return err("Status tidak boleh kosong");
 
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: { payments: true, customer: true, bus: true },
     });
+
     if (!booking) return err("Booking tidak ditemukan");
 
     const updated = await prisma.booking.update({
@@ -717,11 +717,13 @@ export async function updateStatusSchedule(
     });
 
     if (String(status) === "COMPLETED") {
-      const finalExists = booking.payments.some((p) => p.type === "FULL");
-      if (!finalExists) {
+      const alreadyPaidFull = booking.payments.some((p) => p.type === "FULL");
+
+      if (!alreadyPaidFull) {
         const dp = booking.payments.find((p) => p.type === "DP")?.amount ?? 0;
         const finalAmount = Number(booking.priceTotal) - Number(dp);
-        if (finalAmount > 0) {
+
+        if (finalAmount) {
           await prisma.payment.create({
             data: {
               bookingId: id,
@@ -739,7 +741,25 @@ export async function updateStatusSchedule(
       await revalidateMasterSchedules();
     }
 
-    return ok(updated);
+    await pusherServer.trigger("navara-travel", "schedule.updated", {
+      type: "status-updated",
+      id: updated.id,
+      status,
+    });
+
+    const safeUpdated = {
+      ...updated,
+      priceTotal: updated.priceTotal ? Number(updated.priceTotal) : 0,
+      rentStartAt: updated.rentStartAt?.toISOString() ?? null,
+      rentEndAt: updated.rentEndAt?.toISOString() ?? null,
+      pickupAt: updated.pickupAt?.toISOString() ?? null,
+      createdAt: updated.createdAt?.toISOString() ?? null,
+      updatedAt: updated.updatedAt?.toISOString() ?? null,
+      customer: updated.customer?.name ?? null,
+      bus: updated.bus?.name ?? null,
+    };
+
+    return ok(safeUpdated);
   } catch (e: any) {
     return err(e.message ?? "Gagal memperbarui status schedule");
   }
