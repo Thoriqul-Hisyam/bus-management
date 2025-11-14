@@ -9,6 +9,7 @@ import { ok, err, type Result } from "@/lib/result";
 import { revalidateMasterSchedules } from "./_utils";
 import { Prisma, BookingStatus } from "@prisma/client";
 import { requirePermission } from "@/lib/guard";
+import { pusherServer } from "@/lib/pusher-server";
 
 export type Option = { value: number; label: string };
 
@@ -587,6 +588,11 @@ export async function createSchedule(input: unknown): Promise<Result<any>> {
       await revalidateMasterSchedules();
     }
 
+    await pusherServer.trigger("navara-travel", "schedule.updated", {
+      type: "created",
+      id: created.id,
+    });
+
     return ok({
       ...created,
       priceTotal: created.priceTotal ? Number(created.priceTotal) : 0,
@@ -638,6 +644,11 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
     if (typeof revalidateMasterSchedules === "function") {
       await revalidateMasterSchedules();
     }
+
+    await pusherServer.trigger("navara-travel", "schedule.updated", {
+      type: "updated",
+      id: updated.id,
+    });
 
     return ok(updated);
   } catch (e: any) {

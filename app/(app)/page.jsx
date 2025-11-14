@@ -7,6 +7,7 @@ import { id } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import Swal from "sweetalert2";
 import { listAllSchedules } from "@/actions/schedule";
+import Pusher from "pusher-js";
 
 import {
   Card,
@@ -55,7 +56,7 @@ export default function ScheduleCheckPage() {
     }
   };
 
-  async function refreshSchedules() {
+  const refreshSchedules = useCallback(async () => {
     try {
       setLoading(true);
       const res = await listAllSchedules();
@@ -65,15 +66,44 @@ export default function ScheduleCheckPage() {
         Swal.fire({ icon: "error", title: "Error", text: res.error });
       }
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Gagal Ambil Data", text: err.message });
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Ambil Data",
+        text: err?.message ?? "Unknown error",
+      });
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     refreshSchedules();
-  }, []);
+  }, [refreshSchedules]);
+
+  useEffect(() => {
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+    const pusher = new Pusher(pusherKey, {
+      cluster: pusherCluster,
+    });
+
+    const channel = pusher.subscribe("navara-travel");
+
+    const handler = (data) => {
+      console.log("schedule.updated received:", data);
+      refreshSchedules();
+    };
+
+    channel.bind("schedule.updated", handler);
+
+    return () => {
+      channel.unbind("schedule.updated", handler);
+      pusher.unsubscribe("navara-travel");
+      pusher.disconnect();
+    };
+  }, [refreshSchedules]);
+
 
   useEffect(() => {
     if (!scheduleList || scheduleList.length === 0) return;
