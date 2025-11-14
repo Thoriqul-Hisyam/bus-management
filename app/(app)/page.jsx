@@ -272,7 +272,7 @@ export default function ScheduleCheckPage() {
           <style jsx>{`
             @keyframes marquee {
               0% {
-                transform: translateX(100%);
+                transform: translateX(1%);
               }
               100% {
                 transform: translateX(-100%);
