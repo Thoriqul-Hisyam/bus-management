@@ -204,6 +204,7 @@ export async function listSchedules(
     }
 
     const where: Prisma.BookingWhereInput = {
+      status: "CONFIRMED",
       ...(q
         ? {
             OR: [
@@ -635,7 +636,7 @@ export async function updateSchedule(input: unknown): Promise<Result<any>> {
         rentStartAt: data.rentStartAt,
         rentEndAt: data.rentEndAt,
         pickupAt: data.pickupAt,
-        status: data.status,
+        status: "CONFIRMED",
         notes: data.notes,
       },
       include: { customer: true, bus: true },
@@ -668,6 +669,11 @@ export async function deleteSchedule(
     if (typeof revalidateMasterSchedules === "function") {
       await revalidateMasterSchedules();
     }
+
+    await pusherServer.trigger("navara-travel", "schedule.updated", {
+      type: "deleted",
+      id: id,
+    });
 
     return ok({ message: "Schedule & payment deleted" });
   } catch (e: any) {

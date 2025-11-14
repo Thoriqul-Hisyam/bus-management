@@ -29,11 +29,11 @@ export default function EditSchedulePage() {
   const [driverOpts, setDriverOpts] = useState<ROption[]>([]);
   const [coDriverOpts, setCoDriverOpts] = useState<ROption[]>([]);
   const [salesOpts, setSalesOpts] = useState<ROption[]>([]);
-  const statusOpts: ROption[] = [
-    { value: "CONFIRMED", label: "CONFIRMED" },
-    { value: "COMPLETED", label: "COMPLETED" },
-    { value: "CANCELLED", label: "CANCELLED" },
-  ];
+  // const statusOpts: ROption[] = [
+  //   { value: "CONFIRMED", label: "CONFIRMED" },
+  //   { value: "COMPLETED", label: "COMPLETED" },
+  //   { value: "CANCELLED", label: "CANCELLED" },
+  // ];
 
   const [form, setForm] = useState({
     customerId: null as number | string | null,
@@ -94,7 +94,7 @@ export default function EditSchedulePage() {
           rentStartAt: toLocalInput(d.rentStartAt),
           rentEndAt: toLocalInput(d.rentEndAt),
           pickupAt: toLocalInput(d.pickupAt),
-          status: d.status ?? "CONFIRMED",
+          status: "CONFIRMED",
           notes: d.notes ?? "",
         });
       } else {
@@ -162,7 +162,9 @@ export default function EditSchedulePage() {
               value={form.busId}
               onChange={(v) =>
                 setForm((s) => {
-                  const selected = (busOpts as any[]).find((b) => b.value === v);
+                  const selected = (busOpts as any[]).find(
+                    (b) => b.value === v
+                  );
                   return {
                     ...s,
                     busId: v,
@@ -173,7 +175,6 @@ export default function EditSchedulePage() {
               }
               placeholder="Pilih armada"
             />
-
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -182,7 +183,9 @@ export default function EditSchedulePage() {
               <Input
                 type="datetime-local"
                 value={form.rentStartAt}
-                onChange={(e) => setForm((s) => ({ ...s, rentStartAt: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, rentStartAt: e.target.value }))
+                }
               />
             </div>
             <div>
@@ -190,25 +193,35 @@ export default function EditSchedulePage() {
               <Input
                 type="datetime-local"
                 value={form.rentEndAt}
-                onChange={(e) => setForm((s) => ({ ...s, rentEndAt: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, rentEndAt: e.target.value }))
+                }
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-muted-foreground">Waktu Penjemputan (opsional)</label>
+            <label className="text-sm text-muted-foreground">
+              Waktu Penjemputan (opsional)
+            </label>
             <Input
               type="datetime-local"
               value={form.pickupAt}
-              onChange={(e) => setForm((s) => ({ ...s, pickupAt: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, pickupAt: e.target.value }))
+              }
             />
           </div>
 
           <div>
-            <label className="text-sm text-muted-foreground">Alamat Penjemputan</label>
+            <label className="text-sm text-muted-foreground">
+              Alamat Penjemputan
+            </label>
             <Input
               value={form.pickupAddress}
-              onChange={(e) => setForm((s) => ({ ...s, pickupAddress: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, pickupAddress: e.target.value }))
+              }
               placeholder="Alamat penjemputan"
             />
           </div>
@@ -217,22 +230,30 @@ export default function EditSchedulePage() {
             <label className="text-sm text-muted-foreground">Tujuan</label>
             <Input
               value={form.destination}
-              onChange={(e) => setForm((s) => ({ ...s, destination: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, destination: e.target.value }))
+              }
               placeholder="Tujuan"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm text-muted-foreground">Kursi Dipesan</label>
+              <label className="text-sm text-muted-foreground">
+                Kursi Dipesan
+              </label>
               <Input
                 type="number"
                 value={form.seatsBooked}
-                onChange={(e) => setForm((s) => ({ ...s, seatsBooked: e.target.value }))}
+                onChange={(e) =>
+                  setForm((s) => ({ ...s, seatsBooked: e.target.value }))
+                }
               />
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Harga Total</label>
+              <label className="text-sm text-muted-foreground">
+                Harga Total
+              </label>
               <Input
                 value={formatRupiah(Number(form.priceTotal) || 0)}
                 onChange={(e) => {
@@ -279,31 +300,39 @@ export default function EditSchedulePage() {
             </div>
           </div>
 
-          <div>
+          {/* <div>
             <label className="text-sm text-muted-foreground">Status</label>
             <RSelect
               instanceId="edit-status"
               options={statusOpts}
               value={form.status}
-              onChange={(v) => setForm((s) => ({ ...s, status: (v as string) || "CONFIRMED" }))}
+              onChange={(v) =>
+                setForm((s) => ({ ...s, status: (v as string) || "CONFIRMED" }))
+              }
             />
-          </div>
+          </div> */}
 
           <div className="flex items-center gap-2">
             <input
               id="legrest"
               type="checkbox"
               checked={form.legrest}
-              onChange={(e) => setForm((s) => ({ ...s, legrest: e.target.checked }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, legrest: e.target.checked }))
+              }
             />
-            <label htmlFor="legrest" className="text-sm">Legrest</label>
+            <label htmlFor="legrest" className="text-sm">
+              Legrest
+            </label>
           </div>
 
           <div>
             <label className="text-sm text-muted-foreground">Catatan</label>
             <Textarea
               value={form.notes}
-              onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, notes: e.target.value }))
+              }
             />
           </div>
 
